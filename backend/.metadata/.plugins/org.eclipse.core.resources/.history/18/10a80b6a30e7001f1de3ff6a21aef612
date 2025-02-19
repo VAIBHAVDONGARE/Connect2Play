@@ -1,0 +1,254 @@
+package com.connect2play.service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.connect2play.dto.NotificationResponseDTO;
+import com.connect2play.dto.TeamRequestCreateDTO;
+import com.connect2play.dto.TeamRequestDTO;
+import com.connect2play.dto.TeamRequestResponseDTO;
+import com.connect2play.entities.NotificationType;
+import com.connect2play.entities.RequestStatus;
+import com.connect2play.entities.RequestType;
+import com.connect2play.entities.Team;
+import com.connect2play.entities.TeamRequest;
+import com.connect2play.entities.User;
+import com.connect2play.exception.BadRequestException;
+import com.connect2play.exception.ResourceNotFoundException;
+import com.connect2play.repository.ITeamRepository;
+import com.connect2play.repository.ITeamRequestRepository;
+import com.connect2play.repository.IUserRepository;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class TeamRequestServiceImpl implements ITeamRequestService {
+	@Autowired
+	private ITeamRequestRepository teamRequestRepository;
+	@Autowired
+	private ITeamRepository teamRepository;
+	@Autowired
+	private IUserRepository userRepository;
+	@Autowired
+	private INotificationService notificationService;
+	@Autowired
+	private ModelMapper modelMapper;
+
+	@Override
+	@Transactional
+	public TeamRequestCreateDTO sendJoinRequest(Long userId, Long teamId, String responseMessage) {
+		User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		Team team = teamRepository.findById(teamId).orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+
+		// Check if the user is already in the team
+		if (teamRequestRepository.isUserAlreadyInTeam(teamId, userId)) {
+			throw new BadRequestException("You are already a member of this team.");
+		}
+		// Check if a pending request already exists
+		if (teamRequestRepository.existsByRequestedUserIdAndTeamIdAndStatus(userId, teamId,
+				RequestStatus.PENDING)) {
+			throw new BadRequestException("You already have a pending request for this team.");
+		}
+
+		// Create a join request
+		TeamRequest teamRequest = new TeamRequest();
+		teamRequest.setCreatedBy(user); // User is sending the request
+		teamRequest.setRequestedUser(user);
+		teamRequest.setTeam(team);
+		teamRequest.setRequestType(RequestType.JOIN_REQUEST);
+		teamRequest.setStatus(RequestStatus.PENDING);
+		// teamRequest.setRequestMessage(message);
+
+		TeamRequest savedRequest = teamRequestRepository.save(teamRequest);
+		// Notification To TeamCreater
+		Long teamOwnerId = team.getCreator().getTeamId(); // Assuming `getCreatedBy()` fetches the owner
+		NotificationResponseDTO notificationDTO = new NotificationResponseDTO(null, // Notification ID will be
+																					// auto-generated
+				NotificationType.TEAM_JOIN_REQUEST, "New Team Join Request",
+				user.getFullName() + " has requested to join your team: " + team.getTeamName(), userId, // Sender (who
+																										// sent the
+																										// request)
+				teamOwnerId, // Receiver team creator
+				"TEAM", false, // Not read yet
+				LocalDateTime.now(), null, // `readAt` is initially null
+				false);
+		notificationService.createNotification(notificationDTO);
+
+		return modelMapper.map(savedRequest, TeamRequestCreateDTO.class);
+
+	}
+
+//	Team creator sends an invite to a user.
+	@Override
+	@Transactional
+	public TeamRequestDTO sendTeamInvite(Long creatorId, Long userId, Long teamId, String responseMessage) {
+		User creator = userRepository.findById(creatorId)
+				.orElseThrow(() -> new ResourceNotFoundException("Creator not found"));
+
+		User invitedUser = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		Team team = teamRepository.findById(teamId).orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+
+		// Ensure only the team creator can send an invite
+		if (!team.getCreator().getId().equals(creatorId)) {
+			throw new BadRequestException("Only the team creator can send invites.");
+		}
+
+		// Check if the user is already in the team
+		if (teamRequestRepository.isUserAlreadyInTeam(teamId, userId)) {
+			throw new BadRequestException("User is already a member of this team.");
+		}
+
+		// Check if an invite already exists
+		if (teamRequestRepository.existsByRequestedUserIdAndTeamIdAndStatus(userId, teamId,
+				RequestStatus.PENDING)) {
+			throw new BadRequestException("An invite has already been sent to this user.");
+		}
+
+		// Create an invite request
+		TeamRequest teamRequest = new TeamRequest();
+		teamRequest.setCreatedBy(creator);
+		teamRequest.setRequestedUser(invitedUser);
+		teamRequest.setTeam(team);
+		teamRequest.setRequestType(RequestType.TEAM_INVITE);
+		teamRequest.setStatus(RequestStatus.PENDING);
+		// teamRequest.setRequestMessage(message);
+
+		TeamRequest savedRequest = teamRequestRepository.save(teamRequest);
+
+		NotificationResponseDTO notificationDTO = new NotificationResponseDTO(null, NotificationType.TEAM_INVITE,
+				"New Team Invitation", creator.getFullName() + " has invited you to join their team.", creatorId,
+				userId, "TEAM", false, LocalDateTime.now(), null, false);
+
+		notificationService.createNotification(notificationDTO);
+		return modelMapper.map(savedRequest, TeamRequestDTO.class);
+	}
+//	      Accept a team request
+
+	@Override
+	@Transactional
+	public void acceptRequest(Long requestId, String responseMessage) {
+		TeamRequest request = teamRequestRepository.findById(requestId)
+				.orElseThrow(() -> new ResourceNotFoundException("Request not found"));
+
+		if (request.getStatus() != RequestStatus.PENDING) {
+			throw new BadRequestException("Request is already processed.");
+		}
+
+		request.acceptRequest(responseMessage);
+		teamRequestRepository.save(request);
+		// ✅ Add user to team (if needed)
+		Team team = request.getTeam();
+		User newMember = request.getRequestedUser();
+
+		if (!team.getRegisteredMembers().contains(newMember)) { // Prevent duplicate additions
+			team.getRegisteredMembers().add(newMember);
+			teamRepository.save(team); // Ensure the team is updated
+		}
+
+		// ✅ Send Notification to the Sender
+		NotificationResponseDTO notificationDTO = new NotificationResponseDTO(null, // Auto-generated ID
+				NotificationType.REQUEST_ACCEPTED, "Your Team Request Was Accepted",
+				newMember.getFullName() + " has accepted your request to join the team: " + team.getTeamName(),
+				newMember.getId(), // Sender (who accepted the request)
+				request.getCreatedBy().getId(), // Receiver (original request sender)
+				"TEAM", false, LocalDateTime.now(), null, false);
+
+	}
+
+	@Override
+	@Transactional
+	public void rejectRequest(Long requestId, String responseMessage) {
+		TeamRequest request = teamRequestRepository.findById(requestId)
+				.orElseThrow(() -> new ResourceNotFoundException("Request not found"));
+
+		if (request.getStatus() != RequestStatus.PENDING) {
+			throw new BadRequestException("Request is already processed.");
+		}
+
+		request.rejectRequest(responseMessage);
+		teamRequestRepository.save(request);
+
+		// ✅ Send Notification to the sender
+		NotificationResponseDTO notificationDTO = new NotificationResponseDTO(null, // Auto-generated ID
+				NotificationType.REQUEST_REJECTED, "Your Team Request Was Rejected",
+				"Your request to join the team '" + request.getTeam().getTeamName() + "' was rejected.",
+				request.getRequestedUser().getId(), // Sender (who rejected the request)
+				request.getCreatedBy().getId(), // Receiver (original request sender)
+				"TEAM", false, LocalDateTime.now(), null, false);
+
+		notificationService.createNotification(notificationDTO);
+
+	}
+
+	@Override
+	@Transactional
+	public void cancelRequest(Long requestId) {
+		TeamRequest request = teamRequestRepository.findById(requestId)
+				.orElseThrow(() -> new ResourceNotFoundException("Request not found"));
+
+		if (request.getStatus() != RequestStatus.PENDING) {
+			throw new BadRequestException("Request is already processed.");
+		}
+
+		request.cancelRequest("Request cancelled by user.");
+		teamRequestRepository.save(request);
+		// ✅ Send Notification to the receiver (team creator/user)
+		NotificationResponseDTO notificationDTO = new NotificationResponseDTO(null, // Auto-generated ID
+				NotificationType.REQUEST_CANCELLED, "Team Request Canceled",
+				"The request to join the team '" + request.getTeam().getTeamName() + "' was canceled.",
+				request.getRequestedUser().getId(), // Sender (who canceled the request)
+				request.getCreatedBy().getId(), // Receiver (original request creator)
+				"TEAM", false, LocalDateTime.now(), null, false);
+
+		notificationService.createNotification(notificationDTO);
+	}
+
+	@Override
+	public List<TeamRequestResponseDTO> getPendingRequestsForTeam(Long teamId) {
+		List<TeamRequest> pendingRequests = teamRequestRepository.findPendingRequestsByTeam(teamId);
+		Team team = teamRepository.findById(teamId)
+		        .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+		   NotificationResponseDTO notificationDTO = new NotificationResponseDTO(
+			        null,
+			        NotificationType.PENDING_REQUESTS,
+			        "Pending Team Requests",
+			        "You have " + pendingRequests.size() + " pending requests for your team: " + team.getTeamName(),
+			        team.getCreator().getId(),  // Team creator gets notified
+			        team.getCreator().getId(),
+			        "TEAM",
+			        false,
+			        LocalDateTime.now(),
+			        null,
+			        false
+			    );
+
+			    notificationService.createNotification(notificationDTO);
+				return pendingRequests.stream().map(request -> modelMapper.map(request, TeamRequestResponseDTO.class))
+						.collect(Collectors.toList());
+	}
+
+	@Override
+	public List<TeamRequestResponseDTO> getUserPendingRequests(Long userId) {
+		List<Team> requestedTeams = teamRequestRepository.findTeamsUserRequestedToJoin(userId);
+		NotificationResponseDTO notificationDTO = new NotificationResponseDTO(null, NotificationType.PENDING_REQUESTS,
+				"Your Team Join Requests",
+				"You have " + requestedTeams.size() + " pending requests waiting for approval.", userId, userId, "USER",
+				false, LocalDateTime.now(), null, false);
+
+		notificationService.createNotification(notificationDTO);
+		return requestedTeams.stream()
+
+				.map(team -> modelMapper.map(team, TeamRequestResponseDTO.class)).collect(Collectors.toList());
+	}
+}

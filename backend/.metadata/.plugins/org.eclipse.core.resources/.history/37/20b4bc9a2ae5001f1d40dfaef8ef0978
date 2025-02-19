@@ -1,0 +1,26 @@
+package com.connect2play.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.connect2play.entities.FriendRequest;
+import com.connect2play.entities.RequestStatus;
+import com.connect2play.entities.User;
+
+public interface IFriendRequestService {
+
+	void sendFriendRequest(Long senderId, Long receiverId);
+
+	void acceptFriendRequest(Long requestId);
+
+	void declineFriendRequest(Long requestId);
+
+	void cancelFriendRequest(Long requestId);
+
+	List<FriendRequest> getPendingRequests(Long userId);
+
+	List<FriendRequest> getAllFriends(Long userId);
+
+}

@@ -1,0 +1,148 @@
+package com.connect2play.entities;
+
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
+@Entity
+@Table(name = "team_requests", uniqueConstraints = @UniqueConstraint(columnNames = {"creator_id", "requested_user_id", "team_id", "request_type"}))
+@Getter
+@Setter
+@ToString(callSuper = true)
+public class TeamRequest  {
+	
+	 @Id
+	    @GeneratedValue(strategy = GenerationType.IDENTITY)
+	    private Long teamRequestId;
+
+	    @Column(nullable = false, updatable = false)
+	    private LocalDateTime createdAt;
+
+	    @Column(nullable = false)
+	    private LocalDateTime updatedAt;
+
+	    @PrePersist
+	    protected void onCreate() {
+	        createdAt = LocalDateTime.now();
+	        updatedAt = createdAt;
+	    }
+
+	    @PreUpdate
+	    protected void onUpdate() {
+	        updatedAt = LocalDateTime.now();
+	    }
+
+	@ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "creator_id", nullable = false)
+    private User createdBy; // User who sends the invite
+
+	@ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receiver_id", nullable = false)
+    private User receiver;
+	
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requested_user_id", nullable = false)
+    private User requestedUser; // User who receives the invite
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id", nullable = false)
+    private Team team; // The team for which the invite is being sent
+
+    @NotNull(message = "Request type is required")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "request_type", nullable = false)
+    private RequestType requestType;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "request_status", nullable = false)
+    private RequestStatus status = RequestStatus.PENDING; // Pending, Approved, Rejected
+    
+    @Size(max = 500, message = "Request message must not exceed 500 characters")
+    @Column(name = "request_message", length = 500)
+    private String requestMessage;  // Optional message from user
+
+    @Size(max = 500, message = "Response message must not exceed 500 characters")
+    @Column(name = "response_message", length = 500)
+    private String responseMessage;  
+    
+//    @PrePersist
+//    private void validateRequest() {
+//        if (createdBy != null && requestedUser != null && createdBy.getId().equals(requestedUser.getId())) {
+//            throw new IllegalArgumentException("A user cannot send a team invite to themselves.");
+//        }
+//    }
+    
+    @PrePersist
+    private void prePersist() {
+        if (createdBy != null && requestedUser != null && createdBy.getuserId().equals(requestedUser.getuserId())) {
+            throw new IllegalArgumentException("A user cannot send a request to themselves.");
+        }
+        this.createdAt = LocalDateTime.now();
+        this.status = RequestStatus.PENDING;
+    }
+    
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAtt = LocalDateTime.now();
+
+    @Column(name = "responded_at")
+    private LocalDateTime respondedAt;
+
+    // Methods to update status
+    public void acceptRequest(String responseMessage) {
+    	if (this.status != RequestStatus.PENDING) {
+            throw new IllegalStateException("Only pending requests can be accepted.");
+    	}
+        this.status = RequestStatus.ACCEPTED;
+        this.responseMessage = responseMessage;
+        this.respondedAt = LocalDateTime.now();
+    }
+
+    public void rejectRequest(String responseMessage) {
+    	if (this.status != RequestStatus.PENDING) {
+            throw new IllegalStateException("Only pending requests can be rejected.");
+        }
+        this.status = RequestStatus.REJECTED;
+        this.responseMessage = responseMessage;
+        this.respondedAt = LocalDateTime.now();
+    }
+
+    public void cancelRequest(String responseMessage) {
+    	if (this.status != RequestStatus.PENDING) {
+            throw new IllegalStateException("Only pending requests can be cancelled.");
+        }
+        this.status = RequestStatus.CANCELLED;
+        this.responseMessage = responseMessage;
+        this.respondedAt = LocalDateTime.now();
+    }
+    
+    public boolean isJoinRequest() {
+        return this.requestType == RequestType.JOIN_REQUEST;
+    }
+
+    public boolean isInviteRequest() {
+        return this.requestType == RequestType.TEAM_INVITE;
+    }
+
+    
+
+}
+
+

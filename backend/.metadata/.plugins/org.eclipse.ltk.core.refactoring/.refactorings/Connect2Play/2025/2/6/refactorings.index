@@ -1,0 +1,17 @@
+1738475467505	Delete element
+1738526138793	Rename type 'timeSlot'
+1738595225728	Delete element
+1738597953499	Rename type 'UserRequestDTO'
+1738598092937	Rename type 'UserResponseDTO'
+1738598145891	Rename type 'TeamDTO'
+1738606613903	Rename type 'ChallengeDTO'
+1738686301828	Rename type 'APIResponseDTO'
+1738767033609	Rename type 'UserDetailsDTO'
+1738821999342	Delete element
+1738824519289	Delete element
+1738825028448	Rename compilation unit 'TurfSearchFilter.java'
+1738879095580	Rename compilation unit 'ChallengeRequest.java'
+1738881205291	Rename type 'TeamDetailsDTO'
+1738881631351	Rename type 'TeamDetailsResponseDTO'
+1738912137694	Rename compilation unit 'IFriendRequest.java'
+1738912351530	Rename type 'IFriendRequest'

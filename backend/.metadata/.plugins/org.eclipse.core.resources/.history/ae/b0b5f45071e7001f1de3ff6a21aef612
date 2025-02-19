@@ -1,0 +1,57 @@
+package com.connect2play.repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.connect2play.entities.RequestStatus;
+import com.connect2play.entities.RequestType;
+import com.connect2play.entities.Team;
+import com.connect2play.entities.TeamRequest;
+import com.connect2play.entities.User;
+
+public interface ITeamRequestRepository extends JpaRepository<TeamRequest, Long> {
+	Page<TeamRequest> findByTeam(Team team, Pageable pageable);
+	
+	boolean existsByRequestedUserAndTeamAndStatus(User usrequestedUserer, Team team, RequestStatus status);
+
+    List<TeamRequest> findByTeamAndStatus(Team team, RequestStatus status);
+
+    List<TeamRequest> findByUserAndStatus(User user, RequestStatus status);
+    
+//    pending requests for a user (both invites & join requests)
+    List<TeamRequest> findByRequestedUserIdAndStatus(Long userId, RequestStatus status);
+
+//    pending invites sent by a team creator
+    List<TeamRequest> findByCreatedByIdAndStatus(Long creatorId, RequestStatus status);
+
+//    join requests for a specific team
+    List<TeamRequest> findByTeamIdAndRequestTypeAndStatus(Long teamId, RequestType requestType, RequestStatus status);
+
+//	 Check if a user has already requested to join a team
+    Optional<TeamRequest> findByRequestedUserIdAndTeamIdAndRequestType(Long userId, Long teamId, RequestType requestType);
+
+//	 Check if a team has already invited a user
+    Optional<TeamRequest> findByCreatedByIdAndRequestedUserIdAndTeamIdAndRequestType(Long creatorId, Long userId, Long teamId, RequestType requestType);
+    
+  @Query("SELECT COUNT(t) > 0 FROM registeredMembers t WHERE t.team.id = :teamId AND t.user.id = :userId")
+    boolean isUserAlreadyInTeam(@Param("teamId") Long teamId, @Param("userId") Long userId);
+  
+    @Query("SELECT tr FROM TeamRequest tr WHERE tr.team.id = :teamId AND tr.status = 'PENDING'")
+    List<TeamRequest> findPendingRequestsByTeam(@Param("teamId") Long teamId);
+
+//     all teams a user has requested to join
+    @Query("SELECT tr.team FROM TeamRequest tr WHERE tr.requestedUser.id = :userId AND tr.status = 'PENDING' AND tr.requestType = 'JOIN_REQUEST'")
+    List<Team> findTeamsUserRequestedToJoin(@Param("userId") Long userId);
+    
+////    all users a team has invited who they have invited but haven’t accepted ye
+//    @Query("SELECT tr.requestedUser FROM TeamRequest tr WHERE tr.team.id = :teamId AND tr.status = 'PENDING' AND tr.requestType = 'INVITE'")
+//    List<User> findUsersInvitedByTeam(@Param("teamId") Long teamId);
+
+    boolean existsByRequestedUserUserIdAndTeamIdAndStatus(Long userId, Long teamId, RequestStatus status );
+}

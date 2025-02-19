@@ -1,0 +1,99 @@
+package com.connect2play.service;
+
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import com.connect2play.dto.ApiResponseDTO;
+import com.connect2play.dto.ChallengeResponseDTO;
+import com.connect2play.dto.FriendRequestResponseDTO;
+import com.connect2play.dto.NotificationResponseDTO;
+import com.connect2play.dto.TeamCreateDTO;
+import com.connect2play.dto.TeamRequestCreateDTO;
+import com.connect2play.dto.TeamRequestDTO;
+import com.connect2play.dto.TeamRequestResponseDTO;
+import com.connect2play.dto.UserDetailsResponseDTO;
+import com.connect2play.dto.UserFullDetailsResponseDTO;
+import com.connect2play.dto.UserRegistrationDTO;
+import com.connect2play.dto.UserSummaryDTO;
+import com.connect2play.entities.Gender;
+import com.connect2play.entities.RequestStatus;
+import com.connect2play.entities.User;
+import com.connect2play.entities.UserRole;
+//Jay Shree Ram
+public interface IUserService {
+
+
+	    // User Authentication & Account Management
+	    ApiResponseDTO registerUser(UserRegistrationDTO userRegistrationDTO);
+	    UserFullDetailsResponseDTO findUserByEmail(String email);
+	    boolean isEmailTaken(String email);
+	    void deleteUser(Long userId);
+	    
+	    // User Profile
+	    UserDetailsResponseDTO updateProfile(Long userId, UserRegistrationDTO updatedUserDTO);
+	    UserFullDetailsResponseDTO getUserById(Long userId);
+	    List<UserSummaryDTO> findUsersWithoutProfileImage();
+	    List<UserSummaryDTO> findUsersWithBio();
+
+	    // Searching & Filtering Users
+	    Page<UserSummaryDTO> searchUsers(String fullName, UserRole role, Gender gender, Pageable pageable);
+	    Page<UserSummaryDTO> findUsersByName(String name, Pageable pageable);
+
+	    // Team Management
+	    boolean hasUserCreatedTeams(Long userId);
+	    Optional<UserSummaryDTO> findTeamCreator(Long teamId);
+	    List<UserSummaryDTO> findUsersWithTeams();
+
+	    // Friend Request Handling
+	    List<FriendRequestResponseDTO> getPendingFriendRequests(Long userId);
+	    long countPendingFriendRequests(Long userId);
+	    void sendFriendRequest(Long senderId, Long receiverId);
+	    void acceptFriendRequest(Long requestId);
+	    void rejectFriendRequest(Long requestId);
+	    void cancelFriendRequest(Long requestId);
+
+	    // Notifications
+	    long countUnreadNotifications(Long userId);
+	    List<NotificationResponseDTO> getUserNotifications(Long userId);
+	    void markNotificationsAsRead(Long userId);
+
+	    // Team Requests
+	    long countPendingTeamRequests(Long userId);
+		public TeamRequestCreateDTO requestToJoinTeam(Long userId, Long teamId, String message);
+	    void acceptTeamJoinRequest(Long requestId);
+	    void rejectTeamJoinRequest(Long requestId);
+
+	    // Statistics
+	    long countUsersByRole(UserRole role);
+	    long countUsersWithTeams();
+	    Page<UserSummaryDTO> findMostActiveTeamCreators(Pageable pageable);
+
+	    // User Engagement
+	    List<UserSummaryDTO> findHighlyEngagedUsers(int notificationCount);
+	    
+	    void createTeam(User creator, TeamCreateDTO teamDTO);
+	    //void sendChallenge(Long userId, Long teamIdToChallenge, ChallengeResponseDTO challengeResponseDTO);
+	    ChallengeResponseDTO sendChallenge(Long challengerId, Long opponentId);
+	    List<ChallengeResponseDTO> getUserChallenges(Long userId);
+	    void acceptChallenge(Long userId, Long challengeId);
+	    void rejectChallenge(Long userId, Long challengeId);
+	    void cancelChallenge(Long userId, Long challengeId);
+	    void completeChallenge(Long userId, Long challengeId);
+		public List<ChallengeResponseDTO> getPendingChallenges(Long userId);
+		public void respondToChallenge(Long userId, Long challengeId, RequestStatus responseStatus);
+		 public List<TeamRequestResponseDTO> getUserPendingRequests(Long userId);
+
+
+
+
+	    List<ChallengeResponseDTO> getChallengesSentByUser(Long userId);
+	    List<ChallengeResponseDTO> getChallengesReceivedByUser(Long userId);
+	    Page<TeamRequestDTO> getJoinRequests(Long teamId, Pageable pageable);
+		boolean areUsersFriends(Long userId1, Long userId2);
+
+
+}

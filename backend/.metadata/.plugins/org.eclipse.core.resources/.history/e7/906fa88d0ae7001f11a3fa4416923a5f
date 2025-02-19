@@ -1,0 +1,17 @@
+package com.connect2play.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.connect2play.entities.MatchHistory;
+import com.connect2play.entities.Team;
+
+public interface IMatchHistoryRepository extends JpaRepository<MatchHistory, Long>{
+	List<MatchHistory> findByTeam1OrTeam2(Team team1, Team team2);
+
+    List<MatchHistory> findByWinner(Team winner);
+
+    List<MatchHistory> findBySportType(String sportType);
+
+}

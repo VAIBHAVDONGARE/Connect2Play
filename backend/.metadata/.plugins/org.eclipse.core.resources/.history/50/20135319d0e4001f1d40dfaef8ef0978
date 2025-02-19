@@ -1,0 +1,26 @@
+package com.connect2play.dto;
+
+import jakarta.validation.constraints.NotNull;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class BookingRequestDTO extends BaseDTO{
+
+    @NotNull(message = "Turf ID is required")
+    private Long turfId;       // The turf being booked
+
+    @NotNull(message = "User ID is required")
+    private Long userId;       // The user making the booking
+
+    @NotNull(message = "Time slot ID is required")
+    private Long timeSlotId;   // The time slot for the booking
+
+    private Double totalAmount; // Total amount for the booking
+
+    private String status;      // Status of the booking (PENDING, CONFIRMED)
+}

@@ -1,0 +1,57 @@
+package com.connect2play.repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import com.connect2play.entities.Sports;
+import com.connect2play.entities.Team;
+import com.connect2play.entities.User;
+
+    @Repository
+    public interface ITeamRepository extends JpaRepository<Team, Long> {
+
+        // Find a team by its ID
+        Optional<Team> findById(Long id);
+
+        // Find teams by the sport type
+        List<Team> findBySportType(Sports sportType);
+
+        // Find teams by name (case insensitive)
+        List<Team> findByNameIgnoreCase(String name);
+
+        // Find teams by creator (user)
+        List<Team> findByCreaterId(Long createrId);
+
+        // Find all teams with pagination support
+        Page<Team> findAll(Pageable pageable);
+
+        // Custom query to find teams based on multiple filters
+        @Query("SELECT t FROM Team t WHERE " +
+                "(?1 IS NULL OR t.name LIKE %?1%) AND " +
+                "(?2 IS NULL OR t.sportType = ?2) AND " +
+                "(?3 IS NULL OR t.memberCount >= ?3) AND " +
+                "(?4 IS NULL OR t.totalWins >= ?4) AND " +
+                "(?5 IS NULL OR t.totalLosses <= ?5)")
+        Page<Team> findByFilters(String name, Sports sportType, Integer minMembers, Integer minWins, Integer maxLosses, Pageable pageable);
+
+        // Custom query to find challenges sent by the team
+        @Query("SELECT t FROM Team t JOIN t.challengesSent c WHERE c.challenger.id = ?1")
+        List<Team> findTeamsThatSentChallenges(Long userId);
+
+        // Custom query to find challenges received by the team
+        @Query("SELECT t FROM Team t JOIN t.challengesReceived c WHERE c.opponent.id = ?1")
+        List<Team> findTeamsThatReceivedChallenges(Long userId);
+
+        // Check if a team with the same name already exists
+        boolean existsByNameIgnoreCase(String name);
+        
+        Team findByCreater(User user);
+    
+
+}

@@ -1,0 +1,17 @@
+package com.connect2play.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.connect2play.entities.Notification;
+import com.connect2play.entities.NotificationType;
+
+public interface INotificationRepository extends JpaRepository<Notification, Long> {
+	List<Notification> findByUserId(Long userId);
+
+    List<Notification> findByType(NotificationType type);
+
+    List<Notification> findByIsRead(boolean isRead);
+
+}

@@ -1,0 +1,59 @@
+package com.connect2play.controller;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.connect2play.dto.BookingRequestDTO;
+import com.connect2play.dto.TurfAvailabilityDTO;
+import com.connect2play.dto.TurfResponseDTO;
+import com.connect2play.service.IBookingService;
+
+@RestController
+@RequestMapping("/api/bookings")
+public class BookingController {
+
+    @Autowired
+    private IBookingService bookingService;
+
+    // Book a Turf
+    @PostMapping("/book")
+    public ResponseEntity<TurfResponseDTO> bookTurf(@RequestBody BookingRequestDTO request) {
+        TurfResponseDTO response = bookingService.bookTurf(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // Cancel a Booking
+    @PutMapping("/cancel/{bookingId}")
+    public ResponseEntity<String> cancelBooking(@PathVariable Long bookingId) {
+        String response = bookingService.cancelBooking(bookingId);
+        return ResponseEntity.ok(response);
+    }
+
+    // Check Turf Availability
+    @GetMapping("/availability")
+    public ResponseEntity<TurfAvailabilityDTO> checkAvailability(
+            @RequestParam Long turfId,
+            @RequestParam LocalDateTime startTime,
+            @RequestParam LocalDateTime endTime) {
+        TurfAvailabilityDTO availability = bookingService.checkTurfAvailability(turfId, startTime, endTime);
+        return ResponseEntity.ok(availability);
+    }
+
+    // Get All Bookings
+    @GetMapping
+    public ResponseEntity<List<TurfResponseDTO>> getAllBookings() {
+        List<TurfResponseDTO> bookings = bookingService.getAllBookings();
+        return ResponseEntity.ok(bookings);
+    }
+}

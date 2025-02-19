@@ -1,0 +1,9 @@
+package com.connect2play.service;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.connect2play.entities.FriendRequest;
+
+public interface IFriendRequest extends JpaRepository<FriendRequest, Long>{
+
+}

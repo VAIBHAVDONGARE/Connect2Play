@@ -1,0 +1,11 @@
+package com.connect2play.service;
+
+import java.util.List;
+
+import com.connect2play.entities.Challenge;
+
+public interface IChallengeService {
+    public List<Challenge> getChallengesSentByTeam(Long challengerId);
+    public List<Challenge> getChallengesReceivedByTeam(Long opponentId);
+
+}

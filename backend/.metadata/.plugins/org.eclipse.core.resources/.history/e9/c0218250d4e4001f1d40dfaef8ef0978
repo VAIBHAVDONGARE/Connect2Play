@@ -1,0 +1,5 @@
+package com.connect2play.dto;
+
+public class FriendRequestDTO {
+
+}

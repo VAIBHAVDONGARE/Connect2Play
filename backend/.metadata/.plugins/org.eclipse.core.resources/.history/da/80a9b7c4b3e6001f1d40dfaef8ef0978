@@ -1,0 +1,126 @@
+package com.connect2play.service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.connect2play.dto.BookingRequestDTO;
+import com.connect2play.dto.TurfAvailabilityDTO;
+import com.connect2play.dto.TurfResponseDTO;
+import com.connect2play.entities.Booking;
+import com.connect2play.entities.BookingStatus;
+import com.connect2play.entities.Payment;
+import com.connect2play.entities.PaymentStatus;
+import com.connect2play.entities.TimeSlot;
+import com.connect2play.entities.Turf;
+import com.connect2play.entities.User;
+import com.connect2play.exception.ResourceNotFoundException;
+import com.connect2play.repository.IBookingRepository;
+import com.connect2play.repository.IPaymentRepository;
+import com.connect2play.repository.ITimeSlotRepository;
+import com.connect2play.repository.ITurfRepository;
+
+@Service
+@Transactional
+public class BookingServiceImpl implements IBookingService {
+
+    @Autowired
+    private ITurfRepository turfRepository;
+
+    @Autowired
+    private IBookingRepository bookingRepository;
+
+    @Autowired
+    private ITimeSlotRepository timeSlotRepository;
+
+    @Autowired
+    private IPaymentRepository paymentRepository;
+    
+    @Autowired
+    private INotificationService notificationService;
+
+    @Autowired
+    private ModelMapper modelMapper;
+
+    // ✅ **Book a Turf**
+    @Override
+    public TurfResponseDTO bookTurf(BookingRequestDTO request) {
+        // 1️⃣ Validate Turf
+        Turf turf = turfRepository.findById(request.getTurfId())
+                .orElseThrow(() -> new ResourceNotFoundException("Turf not found"));
+
+        // 2️⃣ Validate TimeSlot
+        TimeSlot timeSlot = timeSlotRepository.findById(request.getTimeSlotId())
+                .orElseThrow(() -> new ResourceNotFoundException("TimeSlot not found"));
+
+        // 3️⃣ Check if the Turf is Available
+        boolean isAvailable = bookingRepository.countOverlappingBookings(request.getTurfId(), timeSlot.getStartTime(), timeSlot.getEndTime()) == 0;
+        if (!isAvailable) {
+            throw new IllegalStateException("Turf is already booked for the selected time.");
+        }
+
+        // 4️⃣ Create Booking
+        Booking booking = new Booking();
+        booking.setTurf(turf);
+        booking.setUser(new User(request.getUserId()));
+        booking.setTimeSlot(timeSlot);
+        booking.setTotalAmount(request.getTotalAmount());
+        booking.setStatus(BookingStatus.PENDING); // Default to PENDING
+
+        Booking savedBooking = bookingRepository.save(booking);
+
+        // 5️⃣ Process Payment
+        Payment payment = new Payment();
+        payment.setBooking(savedBooking);
+        payment.setAmount(request.getTotalAmount());
+        payment.setPaymentMethod(request.getPaymentMethod());
+        payment.setStatus(PaymentStatus.PENDING); // Mark payment as pending
+        payment.setTransactionId("TXN-" + System.currentTimeMillis()); // Dummy transaction ID
+
+        paymentRepository.save(payment);
+
+        // 6️⃣ Convert and Return DTO Response
+        return modelMapper.map(savedBooking, TurfResponseDTO.class);
+    }
+
+    // ✅ **Cancel a Booking**
+    @Override
+    public String cancelBooking(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepository.save(booking);
+        
+        // ✅ Refund logic
+        Payment payment = paymentRepository.findByBookingId(bookingId).orElseThrow(()-> new ResourceNotFoundException("Payment With This Id Not Found"));
+        if (payment != null && payment.getStatus() == PaymentStatus.SUCCESS) {
+            payment.setStatus(PaymentStatus.REFUNDED);
+            paymentRepository.save(payment);
+            // Send Refund Notification
+            notificationService.sendRefundNotification(booking);
+        }
+
+        return "Booking cancelled and refund processed if applicable.";
+    }
+
+    // ✅ **Check Turf Availability**
+    @Override
+    public TurfAvailabilityDTO checkTurfAvailability(Long turfId, LocalDateTime startTime, LocalDateTime endTime) {
+        boolean isAvailable = bookingRepository
+                .countOverlappingBookings(turfId, startTime, endTime) == 0;
+        return new TurfAvailabilityDTO(turfId, startTime, endTime, isAvailable);
+    }
+    
+    @Override
+    public List<TurfResponseDTO> getAllBookings() {
+        return bookingRepository.findAll().stream()
+                .map(booking -> modelMapper.map(booking, TurfResponseDTO.class))
+                .collect(Collectors.toList());
+    }
+}

@@ -1,0 +1,140 @@
+package com.connect2play.repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import com.connect2play.entities.Team;
+
+@Repository
+public interface ITeamRepository extends JpaRepository<Team, Long> {
+
+    // CRUD operations for Team entity 
+    Optional<Team> findById(Long teamId);
+    void deleteById(Long teamId);
+
+    // Find teams by name 
+    Page<Team> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    // Find teams by sport type 
+    Page<Team> findBySportType(String sportType, Pageable pageable);
+
+    // Find teams created by a specific user
+    @Query("SELECT t FROM Team t WHERE t.creater.id = :userId")
+    List<Team> findByCreatorId(@Param("userId") Long userId);
+
+    // Find teams with specific member count
+    @Query("SELECT t FROM Team t WHERE t.memberCount = :memberCount")
+    List<Team> findByMemberCount(@Param("memberCount") Integer memberCount);
+
+    // Count the number of teams with a specific sport type
+    long countBySportType(String sportType);
+
+    // Find the total number of teams
+    long count();
+
+    // Check if a team exists by its name
+    boolean existsByName(String name);
+
+    // Check if a user is part of a specific team
+    @Query("SELECT COUNT(tm) > 0 FROM Team t JOIN t.registeredMembers tm WHERE t.id = :teamId AND tm.id = :userId")
+    boolean isUserInTeam(@Param("teamId") Long teamId, @Param("userId") Long userId);
+
+    // Get a list of teams a user is a part of
+    @Query("SELECT t FROM Team t JOIN t.registeredMembers tm WHERE tm.id = :userId")
+    List<Team> findTeamsByUserId(@Param("userId") Long userId);
+
+    // Team request related (for invitations)
+    @Modifying
+    @Query("INSERT INTO TeamRequest (inviterId, inviteeId, teamId, status) " +
+           "VALUES (:inviterId, :inviteeId, :teamId, :status)")
+    void sendTeamRequest(@Param("inviterId") Long inviterId,
+                         @Param("inviteeId") Long inviteeId,
+                         @Param("teamId") Long teamId,
+                         @Param("status") String status); // 'PENDING' or any status you pass
+
+    // Accept team request
+    @Modifying
+    @Query("UPDATE TeamRequest tr SET tr.status = 'ACCEPTED' WHERE tr.id = :requestId")
+    void acceptTeamRequest(@Param("requestId") Long requestId);
+
+    // Reject team request
+    @Modifying
+    @Query("UPDATE TeamRequest tr SET tr.status = 'REJECTED' WHERE tr.id = :requestId")
+    void rejectTeamRequest(@Param("requestId") Long requestId);
+
+    // Get a list of all teams
+    @Query("SELECT t FROM Team t ORDER BY t.name ASC")
+    List<Team> findAllTeams();
+
+    // Get a list of active teams sorted by the number of wins or points
+    @Query("SELECT t FROM Team t ORDER BY t.totalWins DESC")
+    List<Team> findTopTeams(Pageable pageable);
+
+    // Advanced team search query with filters (like name, sport type, etc.)
+    @Query("SELECT t FROM Team t WHERE (:teamName IS NULL OR LOWER(t.name) LIKE LOWER(CONCAT('%', :teamName, '%'))) " +
+           "AND (:sportType IS NULL OR t.sportType = :sportType)")
+    Page<Team> searchTeams(@Param("teamName") String teamName,
+                           @Param("sportType") String sportType,
+                           Pageable pageable);
+    
+    package com.connect2play.repository;
+
+    import com.connect2play.entities.Team;
+    import com.connect2play.entities.Sports;
+    import org.springframework.data.domain.Page;
+    import org.springframework.data.domain.Pageable;
+    import org.springframework.data.jpa.repository.JpaRepository;
+    import org.springframework.data.jpa.repository.Query;
+    import org.springframework.stereotype.Repository;
+
+    import java.util.List;
+    import java.util.Optional;
+
+    @Repository
+    public interface TeamRepository extends JpaRepository<Team, Long> {
+
+        // Find a team by its ID
+        Optional<Team> findById(Long id);
+
+        // Find teams by the sport type
+        List<Team> findBySportType(Sports sportType);
+
+        // Find teams by name (case insensitive)
+        List<Team> findByNameIgnoreCase(String name);
+
+        // Find teams by creator (user)
+        List<Team> findByCreaterId(Long createrId);
+
+        // Find all teams with pagination support
+        Page<Team> findAll(Pageable pageable);
+
+        // Custom query to find teams based on multiple filters
+        @Query("SELECT t FROM Team t WHERE " +
+                "(?1 IS NULL OR t.name LIKE %?1%) AND " +
+                "(?2 IS NULL OR t.sportType = ?2) AND " +
+                "(?3 IS NULL OR t.memberCount >= ?3) AND " +
+                "(?4 IS NULL OR t.totalWins >= ?4) AND " +
+                "(?5 IS NULL OR t.totalLosses <= ?5)")
+        Page<Team> findByFilters(String name, Sports sportType, Integer minMembers, Integer minWins, Integer maxLosses, Pageable pageable);
+
+        // Custom query to find challenges sent by the team
+        @Query("SELECT t FROM Team t JOIN t.challengesSent c WHERE c.challenger.id = ?1")
+        List<Team> findTeamsThatSentChallenges(Long userId);
+
+        // Custom query to find challenges received by the team
+        @Query("SELECT t FROM Team t JOIN t.challengesReceived c WHERE c.opponent.id = ?1")
+        List<Team> findTeamsThatReceivedChallenges(Long userId);
+
+        // Check if a team with the same name already exists
+        boolean existsByNameIgnoreCase(String name);
+    }
+
+}

@@ -1,0 +1,15 @@
+package com.connect2play.repository;
+
+import java.util.List;
+
+import com.connect2play.entities.MatchHistory;
+import com.connect2play.entities.Team;
+
+public interface IMatchHistoryRepository {
+	List<MatchHistory> findByTeam1OrTeam2(Team team1, Team team2);
+
+    List<MatchHistory> findByWinner(Team winner);
+
+    List<MatchHistory> findBySportType(String sportType);
+
+}

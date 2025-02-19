@@ -1,0 +1,62 @@
+package com.connect2play.repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.connect2play.entities.FriendRequest;
+import com.connect2play.entities.RequestStatus;
+import com.connect2play.entities.User;
+
+public interface IFriendRequestRepository extends JpaRepository<FriendRequest, Long> {
+	
+	Optional<FriendRequest> findBySenderAndReceiver(User sender, User receiver);
+    List<FriendRequest> findByReceiverAndStatus(User receiver, RequestStatus status);
+	// 1️⃣ Check if a friend request exists between two users (both directions)
+    @Query("SELECT fr FROM FriendRequest fr WHERE (fr.sender.id = :userId1 AND fr.receiver.id = :userId2) " +
+           "OR (fr.sender.id = :userId2 AND fr.receiver.id = :userId1)")
+    Optional<FriendRequest> findFriendRequestBetweenUsers(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
+
+    // 2️⃣ Fetch all pending friend requests received by a user
+    @Query("SELECT fr FROM FriendRequest fr WHERE fr.receiver.id = :userId AND fr.status = 'PENDING'")
+    List<FriendRequest> findPendingRequestsForUser(@Param("userId") Long userId);
+
+    // 3️⃣ Fetch all friend requests sent by a user
+    @Query("SELECT fr FROM FriendRequest fr WHERE fr.sender.id = :userId")
+    List<FriendRequest> findSentRequests(@Param("userId") Long userId);
+
+    // 4️⃣ Fetch all accepted friend requests of a user (Friends List)
+    @Query("SELECT fr FROM FriendRequest fr WHERE (fr.sender.id = :userId OR fr.receiver.id = :userId) " +
+           "AND fr.status = 'ACCEPTED'")
+    List<FriendRequest> findAllFriends(@Param("userId") Long userId);
+
+    // 5️⃣ Fetch all declined friend requests of a user
+    @Query("SELECT fr FROM FriendRequest fr WHERE (fr.sender.id = :userId OR fr.receiver.id = :userId) " +
+           "AND fr.status = 'DECLINED'")
+    List<FriendRequest> findDeclinedRequests(@Param("userId") Long userId);
+
+    // 6️⃣ Update the status of a friend request (Accept/Decline/Cancel)
+//    @Modifying
+//    @Transactional
+//    @Query("UPDATE FriendRequest fr SET fr.status = :status WHERE fr.id = :requestId")
+//    int updateRequestStatus(@Param("requestId") Long requestId, @Param("status") String status);
+
+    // 7️⃣ Delete (Cancel) a friend request
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM FriendRequest fr WHERE fr.id = :requestId")
+    void deleteFriendRequest(@Param("requestId") Long requestId);
+
+    // 8️⃣ Check if two users are already friends
+    @Query("SELECT COUNT(fr) > 0 FROM FriendRequest fr WHERE " +
+           "(fr.sender.id = :userId1 AND fr.receiver.id = :userId2 OR " +
+           "fr.sender.id = :userId2 AND fr.receiver.id = :userId1) " +
+           "AND fr.status = 'ACCEPTED'")
+    boolean areUsersFriends(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
+
+}

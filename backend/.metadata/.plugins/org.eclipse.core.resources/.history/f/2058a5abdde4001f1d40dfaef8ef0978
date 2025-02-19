@@ -1,0 +1,9 @@
+package com.connect2play.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.connect2play.entities.Booking;
+
+public interface IBookingRepository extends JpaRepository<Booking, Long>{
+
+}

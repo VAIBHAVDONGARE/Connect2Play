@@ -1,0 +1,25 @@
+package com.connect2play.service;
+
+import java.util.List;
+
+import com.connect2play.dto.TeamRequestCreateDTO;
+import com.connect2play.dto.TeamRequestDTO;
+import com.connect2play.dto.TeamRequestResponseDTO;
+
+public interface ITeamRequestService {
+	public TeamRequestCreateDTO sendJoinRequest(Long userId, Long teamId);
+
+	public TeamRequestDTO sendTeamInvite(Long creatorId, Long userId, Long teamId);
+	
+    public void acceptRequest(Long requestId,String responseMessage);
+    
+    public void rejectRequest(Long requestId, String responseMessage);
+
+    public void cancelRequest(Long requestId);
+    
+    public List<TeamRequestResponseDTO> getPendingRequestsForTeam(Long teamId);
+
+    public List<TeamRequestDTO> getUserPendingRequests(Long userId) {
+
+
+}

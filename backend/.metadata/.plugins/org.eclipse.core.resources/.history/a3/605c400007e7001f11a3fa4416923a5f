@@ -1,0 +1,32 @@
+package com.connect2play.dto;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import com.connect2play.entities.PaymentMethod;
+import com.connect2play.entities.PaymentStatus;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/**
+ * DTO for Payment Entity (Lightweight)
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class PaymentDTO extends BaseDTO {
+	
+   // private Long bookingId; // Reference to Booking (instead of full Booking object)
+	private Long userId;
+	private BookingResponseDTO bookings;
+    private BigDecimal amount;
+    private PaymentMethod paymentMethod; 
+    private String transactionId; 
+    private PaymentStatus status; 
+    private LocalDateTime createdAt; 
+    private LocalDateTime updatedAt; 
+}

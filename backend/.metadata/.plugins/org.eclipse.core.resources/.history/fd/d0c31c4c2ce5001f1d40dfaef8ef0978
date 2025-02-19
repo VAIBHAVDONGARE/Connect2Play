@@ -1,0 +1,16 @@
+package com.connect2play.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.connect2play.entities.Challenge;
+import com.connect2play.entities.Team;
+
+public interface IChallengeRepository extends JpaRepository<Challenge, Long> {
+
+    List<Challenge> findByChallenger(Team challenger);
+    
+    List<Challenge> findByOpponent(Team challenger);
+
+}

@@ -1,0 +1,42 @@
+package com.connect2play.dto;
+
+import java.time.LocalDateTime;
+
+import com.connect2play.entities.Notification;
+import com.connect2play.entities.NotificationType;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class NotificationResponseDTO extends BaseDTO {
+	private NotificationType type;
+	private String title;
+	private String message;
+	private Long userId;
+	private Long relatedId;
+	private boolean isRead;
+	private LocalDateTime sentTime;
+	private LocalDateTime readAt;
+	private String relatedType;
+	// Flag for soft deletion.
+	private boolean isDeleted;
+
+	public NotificationResponseDTO(Notification notification) {
+		
+		this.type = notification.getType();
+		this.title = notification.getTitle();
+		this.message = notification.getMessage();
+		this.userId = notification.getUserId() != null ? notification.getUserId().getId() : null;
+		this.relatedId = notification.getRelatedId();
+		this.isRead = notification.isRead();
+		this.sentTime = notification.getSentTime();
+		this.readAt = notification.getReadAt();
+		this.isDeleted = notification.isDeleted();
+	}
+}

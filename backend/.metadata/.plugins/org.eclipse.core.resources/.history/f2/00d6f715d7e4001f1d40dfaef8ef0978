@@ -1,0 +1,32 @@
+package com.connect2play.dto;
+
+import java.time.LocalDateTime;
+
+import com.connect2play.entities.BookingStatus;
+import com.connect2play.entities.Sports;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+/**
+ * DTO for booking a turf.
+ */
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class TurfBookingDTO extends BaseDTO {
+
+	private Long bookingId;
+    private UserSummaryDTO userId;           // ID of the user making the booking
+    private TurfSummaryDTO turfId; 
+    private Sports sportType; // Turf ID
+    private LocalDateTime bookingDate; // Date and time for the booking
+    private LocalDateTime startTime;  // Start time of the booking
+    private LocalDateTime endTime;       // Duration of booking (in hours)
+    private BookingStatus status; 
+    private Double totalAmount; 
+    private PaymentDTO payment;// Status of the booking (confirmed, pending, cancelled, etc.)
+}

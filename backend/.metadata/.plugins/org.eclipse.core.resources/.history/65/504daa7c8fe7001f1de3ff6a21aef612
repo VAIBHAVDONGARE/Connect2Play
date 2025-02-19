@@ -1,0 +1,20 @@
+package com.connect2play.config;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import com.connect2play.dto.UserRegistrationDTO;
+import com.connect2play.entities.User;
+
+@Configuration
+public class ModelMapperConfig {
+
+	@Bean
+	public ModelMapper modelMapper() {
+		 modelMapper.typeMap(UserRegistrationDTO.class, User.class)
+         .addMappings(mapper -> mapper.skip(User::setId));
+
+		return new ModelMapper();
+	}
+}

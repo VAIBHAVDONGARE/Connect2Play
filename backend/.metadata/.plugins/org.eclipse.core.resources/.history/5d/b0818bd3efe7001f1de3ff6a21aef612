@@ -1,0 +1,72 @@
+package com.connect2play.security;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@EnableWebSecurity // Enable Spring Security support
+@Configuration // Tells Spring that this class contains beans and configuration
+@EnableGlobalMethodSecurity(prePostEnabled = true) // Enable method-level security annotations
+public class SecurityConfig {
+
+	@Autowired
+	private PasswordEncoder enc; // Dependency injection for password encoder
+
+	@Autowired
+	private JwtAuthenticationFilter jwtFilter; // JWT Authentication Filter
+
+	@Autowired
+	private CustomAuthenticationEntryPoint authEntry; // Custom authentication entry point
+
+	@Bean
+	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+		http.cors().and() // Enables Cross-Origin Resource Sharing (for React/Angular clients)
+				.csrf().disable() // Disabling CSRF as we're using JWT (stateless authentication)
+				.exceptionHandling().authenticationEntryPoint(authEntry) // Handle authentication failures
+				.and().authorizeRequests().requestMatchers("/api/users/register", "/api/users/login").permitAll() // Allow
+																													// HTTP
+																													// access
+																													// for
+																													// registration
+																													// and
+																													// login
+
+				.requestMatchers("/api/users/register", "/api/users/login", "/v*/api-doc*/**", "/swagger-ui/**")
+				.permitAll() // Publicly accessible URLs
+				.requestMatchers(HttpMethod.OPTIONS).permitAll() // Allow pre-flight OPTIONS requests
+				.requestMatchers("/api/users/find-by-email/{email}", "/api/users/{id}/friend-requests/pending",
+						"/api/users/{userId}/friend-requests/count", "/api/users/{userId}/notifications/unread/count")
+				.authenticated() // Authenticated users
+				.requestMatchers("/api/users/{userId}/friend-requests/pending",
+						"/api/users/{userId}/team-requests/count")
+				.hasRole("USER") // Only users can view their requests
+				.requestMatchers("/api/users/{userId}/notifications", "/api/users/{userId}/notifications/read")
+				.hasRole("USER") // Notification access
+				.requestMatchers("/api/users/teams/create", "/api/users/{userId}/team-requests",
+						"/api/users/{userId}/team-request/{teamId}")
+				.hasAnyRole("USER", "OWNER") // Team-related actions
+				.requestMatchers("/api/users").hasRole("OWNER") // Admin-only access
+				.anyRequest().authenticated() // Other endpoints require authentication
+				.and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Stateless session
+																									// for JWT
+				.and().addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class); // Insert JWT filter
+																								// before default filter
+
+		return http.build(); // Return the configured security filter chain
+	}
+
+	@Bean
+	public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+		return config.getAuthenticationManager(); // Provide AuthenticationManager as a Spring bean
+	}
+}

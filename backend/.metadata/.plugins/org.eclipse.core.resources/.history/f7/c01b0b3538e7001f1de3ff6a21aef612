@@ -1,0 +1,35 @@
+package com.connect2play.repository;
+
+import org.springframework.data.domain.Pageable;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import com.connect2play.entities.MatchHistory;
+import com.connect2play.entities.MatchResult;
+import com.connect2play.entities.Sports;
+import com.connect2play.entities.Team;
+
+public interface IMatchHistoryRepository extends JpaRepository<MatchHistory, Long> {
+	List<MatchHistory> findByTeam1OrTeam2(Team team1, Team team2);
+
+	List<MatchHistory> findByWinner(Team winner);
+
+	//List<MatchHistory> findBySportType(String sportType);
+
+	@Query("SELECT m FROM MatchHistory m WHERE m.team1 = :team OR m.team2 = :team")
+	List<MatchHistory> findByTeam(Team team);
+
+	List<MatchHistory> findByMatchDateBetween(LocalDateTime startDate, LocalDateTime endDate);
+
+	List<MatchHistory> findBySportType(Sports sportType);
+
+	List<MatchHistory> findByResult(MatchResult result);
+
+	@Query("SELECT m FROM MatchHistory m WHERE m.team1 = :team OR m.team2 = :team")
+	Page<MatchHistory> findByTeamWithPagination(Team team, Pageable pageable);
+
+}

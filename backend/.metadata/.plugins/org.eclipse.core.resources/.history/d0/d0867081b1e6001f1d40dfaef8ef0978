@@ -1,0 +1,15 @@
+package com.connect2play.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.connect2play.entities.Booking;
+
+public interface IBookingRepository extends JpaRepository<Booking, Long> {
+	List<Booking> findByUserId(Long userId);
+
+	List<Booking> findByTurfId(Long turfId);
+
+	List<Booking> findByBookingDate(String date);
+}

@@ -1,0 +1,31 @@
+package com.connect2play.service;
+
+import java.time.LocalDateTime;
+
+import org.springframework.transaction.annotation.Transactional;
+
+import com.connect2play.entities.Notification;
+import com.connect2play.entities.User;
+import com.connect2play.exception.ResourceNotFoundException;
+
+public class NotificationServiceImpl implements INotificationService{
+	@Override
+    @Transactional
+    public Notification createNotification(NotificationResponseDTO notificationDTO) {
+        User user = userRepository.findById(notificationDTO.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + notificationDTO.getUserId()));
+
+        Notification notification = new Notification();
+        notification.setUser(user);
+        notification.setType(notificationDTO.getType());
+        notification.setTitle(notificationDTO.getTitle());
+        notification.setMessage(notificationDTO.getMessage());
+        notification.setRelatedId(notificationDTO.getRelatedId());
+        notification.setRelatedType(notificationDTO.getRelatedType());
+        notification.setSentTime(LocalDateTime.now());
+        notification.setIsRead(false);
+        notification.setIsDeleted(false);
+
+        return notificationRepository.save(notification);
+    }
+}

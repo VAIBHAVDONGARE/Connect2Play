@@ -1,0 +1,5 @@
+package com.connect2play.controller;
+
+public class MatchHistoryController {
+
+}

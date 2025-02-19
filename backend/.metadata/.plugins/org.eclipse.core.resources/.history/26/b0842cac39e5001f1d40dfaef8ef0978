@@ -1,0 +1,577 @@
+package com.connect2play.service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import com.connect2play.dto.ApiResponseDTO;
+import com.connect2play.dto.ChallengeResponseDTO;
+import com.connect2play.dto.FriendRequestResponseDTO;
+import com.connect2play.dto.NotificationResponseDTO;
+import com.connect2play.dto.TeamCreateDTO;
+import com.connect2play.dto.TeamRequestCreateDTO;
+import com.connect2play.dto.TeamRequestDTO;
+import com.connect2play.dto.UserDetailsResponseDTO;
+import com.connect2play.dto.UserFullDetailsResponseDTO;
+import com.connect2play.dto.UserRegistrationDTO;
+import com.connect2play.dto.UserSummaryDTO;
+import com.connect2play.entities.Challenge;
+import com.connect2play.entities.FriendRequest;
+import com.connect2play.entities.Gender;
+import com.connect2play.entities.Notification;
+import com.connect2play.entities.RequestStatus;
+import com.connect2play.entities.Team;
+import com.connect2play.entities.TeamRequest;
+import com.connect2play.entities.User;
+import com.connect2play.entities.UserRole;
+import com.connect2play.exception.BadRequestException;
+import com.connect2play.exception.ResourceNotFoundException;
+import com.connect2play.repository.IChallengeRepository;
+import com.connect2play.repository.ITeamRepository;
+import com.connect2play.repository.ITeamRequestRepository;
+import com.connect2play.repository.IUserRepository;
+
+import jakarta.transaction.Transactional;
+
+//Jay Shree Ram
+@Service
+@Transactional
+public class UserServiceImpl implements IUserService {
+
+	@Autowired
+	private IUserRepository userRepository;
+
+	@Autowired
+	private ModelMapper modelMapper;
+
+	@Autowired
+	private ITeamRepository teamRepository;
+
+	@Autowired
+	private IChallengeRepository challengeRepository;
+	
+	@Autowired
+	private IChallengeService challengeService;
+
+	@Autowired
+	private ITeamRequestRepository teamRequestRepository;
+
+	@Autowired
+	private IFriendRequestService friendRequestService;
+
+	// Registering New User
+//    @Override
+//    public AuthResponseDTO registerUser(UserDetailsDTO userDetailsDTO) {
+//        if (userRepository.existsByEmail(userDetailsDTO.getEmail())) {
+//            throw new IllegalArgumentException("Email is already taken.");
+//        }
+//        User user = new User(userDetailsDTO);
+//        userRepository.save(user);
+//        return new AuthResponseDTO(user.getId(), "User registered successfully");
+//    }
+	@Override
+	public ApiResponseDTO registerUser(UserRegistrationDTO userRegistrationDTO) {
+		if (userRepository.existsByEmail(userRegistrationDTO.getEmail())) {
+			throw new BadRequestException("Email is already taken.");
+		}
+
+		// Convert DTO to Entity using ModelMapper
+		User user = modelMapper.map(userRegistrationDTO, User.class);
+
+		userRepository.save(user);
+
+		return new ApiResponseDTO("User registered successfully", LocalDateTime.now());
+	}
+
+	// Get User By Email
+	@Override
+	public UserFullDetailsResponseDTO findUserByEmail(String email) {
+		// If the user is not found, throw ResourceNotFoundException
+		return userRepository.findByEmail(email).map(user -> modelMapper.map(user, UserFullDetailsResponseDTO.class))
+				.orElseThrow(() -> new ResourceNotFoundException("User with email " + email + " not found"));
+	}
+
+	// Check Email Availability
+	@Override
+	public boolean isEmailTaken(String email) {
+		return userRepository.existsByEmail(email);
+	}
+
+	// Delete User
+	@Override
+	@Transactional
+	public void deleteUser(Long userId) {
+		if (!userRepository.existsById(userId)) {
+			throw new ResourceNotFoundException("User not found");
+		}
+		userRepository.deleteById(userId);
+	}
+
+	// Update User Profile
+	@Override
+	public UserDetailsResponseDTO updateProfile(Long userId, UserRegistrationDTO updatedUserDTO) {
+		User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		try {
+			modelMapper.map(updatedUserDTO, user);
+			userRepository.save(user);
+		} catch (Exception e) {
+			throw new RuntimeException("Error while updating user profile: " + e.getMessage());
+		}
+
+		return modelMapper.map(user, UserDetailsResponseDTO.class);
+	}
+
+	// Get User By ID
+//	@Override
+//	public Optional<UserFullDetailsResponseDTO> getUserById(Long userId) {
+//        return userRepository.findById(userId)
+//                .map(user -> modelMapper.map(user, UserFullDetailsResponseDTO.class));
+//    }
+	public UserFullDetailsResponseDTO getUserById(Long userId) {
+		return userRepository.findById(userId).map(user -> modelMapper.map(user, UserFullDetailsResponseDTO.class)) // Map
+																													// directly
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+	}
+
+	// Find Users Without Profile Image
+	public List<UserSummaryDTO> findUsersWithoutProfileImage() {
+		try {
+			return userRepository.findUsersWithoutProfileImage().stream()
+					.map(user -> modelMapper.map(user, UserSummaryDTO.class)).collect(Collectors.toList());
+		} catch (Exception e) {
+			throw new RuntimeException("Error while fetching users without profile image: " + e.getMessage());
+		}
+	}
+
+	// Find Users With Bio
+	@Override
+	public List<UserSummaryDTO> findUsersWithBio() {
+		try {
+			return userRepository.findUsersWithBio().stream().map(user -> modelMapper.map(user, UserSummaryDTO.class))
+					.collect(Collectors.toList());
+		} catch (Exception e) {
+			throw new RuntimeException("Error while fetching users with bio: " + e.getMessage());
+		}
+	}
+
+	// Search Users by Name, Role, Gender
+	@Override
+	public Page<UserSummaryDTO> searchUsers(String fullName, UserRole role, Gender gender, Pageable pageable) {
+		try {
+			return userRepository.searchUsers(fullName, role, gender, pageable)
+					.map(user -> modelMapper.map(user, UserSummaryDTO.class));
+		} catch (Exception e) {
+			throw new RuntimeException("Error while searching users: " + e.getMessage());
+
+		}
+	}
+
+	// Find Users by Name
+	@Override
+	public Page<UserSummaryDTO> findUsersByName(String name, Pageable pageable) {
+		try {
+			return userRepository.findByFullNameContainingIgnoreCase(name, pageable)
+					.map(user -> modelMapper.map(user, UserSummaryDTO.class));
+		} catch (Exception e) {
+			throw new RuntimeException("Error while fetching users by name: " + e.getMessage());
+		}
+	}
+
+	// Check If User Has Created Teams
+	@Override
+	public boolean hasUserCreatedTeams(Long userId) {
+		return userRepository.hasCreatedTeams(userId);
+	}
+
+	// Find Team Creator
+	@Override
+	public Optional<UserSummaryDTO> findTeamCreator(Long teamId) {
+		try {
+			return userRepository.findTeamCreator(teamId).map(user -> modelMapper.map(user, UserSummaryDTO.class));
+		} catch (Exception e) {
+			throw new RuntimeException("Error while finding team creator: " + e.getMessage());
+		}
+	}
+
+	// Find Users with Teams
+	@Override
+	public List<UserSummaryDTO> findUsersWithTeams() {
+		try {
+			return userRepository.findUsersWithTeams().stream().map(user -> modelMapper.map(user, UserSummaryDTO.class))
+					.collect(Collectors.toList());
+		} catch (Exception e) {
+			throw new RuntimeException("Error while fetching users with teams: " + e.getMessage());
+		}
+	}
+
+	// Get Pending Friend Requests
+	@Override
+	public List<FriendRequestResponseDTO> getPendingFriendRequests(Long userId) {
+		    List<FriendRequest> pendingRequests = friendRequestService.getPendingRequests(userId); // Get list of entities
+
+		    return pendingRequests.stream()
+		        .map(request -> modelMapper.map(request, FriendRequestResponseDTO.class))  // Convert each entity to DTO
+		        .collect(Collectors.toList());  // Collect into a list
+		}
+
+	
+
+	// Count Pending Friend Requests
+	@Override
+	public long countPendingFriendRequests(Long userId) {
+		return userRepository.countPendingFriendRequests(userId);
+	}
+
+	// Send Friend Request
+	@Override
+	@Transactional
+	public void sendFriendRequest(Long senderId, Long receiverId) {
+		friendRequestService.sendFriendRequest(senderId, receiverId);
+	}
+//		try {
+//			userRepository.sendFriendRequest(senderId, receiverId);
+//		} catch (Exception e) {
+//			throw new RuntimeException("Error while sending friend request: " + e.getMessage());
+//		}	}
+//	  public void sendFriendRequest(Long userId, Long friendId) {
+//	        User user = userRepository.findById(userId)
+//	                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+//
+//	        User friend = userRepository.findById(friendId)
+//	                .orElseThrow(() -> new ResourceNotFoundException("Friend not found with ID: " + friendId));
+//
+//	        if (userId.equals(friendId)) {
+//	            throw new IllegalArgumentException("You cannot send a friend request to yourself");
+//	        }
+//
+//	        FriendRequest friendRequest = new FriendRequest(user, friend);
+//	        friendRequestRepository.save(friendRequest);
+//	    }
+
+	// Accept Friend Request
+	@Override
+	@Transactional
+	public void acceptFriendRequest(Long requestId) {
+		friendRequestService.acceptFriendRequest(requestId);
+	}
+
+	// Reject Friend Request
+	@Override
+	@Transactional
+	public void rejectFriendRequest(Long requestId) {
+		friendRequestService.declineFriendRequest(requestId);
+	}
+	
+	@Override
+	@Transactional
+    public void cancelFriendRequest(Long requestId) {
+        friendRequestService.cancelFriendRequest(requestId);
+    }
+	
+	@Override
+    public boolean areUsersFriends(Long userId1, Long userId2) {
+        return friendRequestService.areUsersFriends(userId1, userId2);
+    }
+
+	// Count Unread Notifications
+	@Override
+	public long countUnreadNotifications(Long userId) {
+		return userRepository.countUnreadNotifications(userId);
+	}
+
+	// Get User Notifications
+	@Override
+	public List<NotificationResponseDTO> getUserNotifications(Long userId) {
+		try {
+			List<Notification> notifications = userRepository.getUserNotifications(userId);
+			return notifications.stream().map(notification -> new NotificationResponseDTO(notification))
+					.collect(Collectors.toList());
+		} catch (Exception e) {
+			throw new RuntimeException("Error while fetching notifications: " + e.getMessage());
+		}
+	}
+
+	// Mark Notifications as Read
+	@Override
+	public void markNotificationsAsRead(Long userId) {
+		userRepository.markNotificationsAsRead(userId);
+	}
+
+	// Count Pending Team Requests
+	@Override
+	public long countPendingTeamRequests(Long userId) {
+		return userRepository.countPendingTeamRequests(userId);
+	}
+
+	// Send Team Join Request
+	@Override
+	public void sendTeamJoinRequest(TeamRequestCreateDTO teamRequestCreateDTO) {
+		// Extract relevant information from the DTO
+		Long inviterId = teamRequestCreateDTO.getInviterId();
+		Long inviteeId = teamRequestCreateDTO.getInviteeId();
+		Long teamId = teamRequestCreateDTO.getTeamId();
+		String status = teamRequestCreateDTO.getStatus().getDisplayName();
+		Team team = teamRepository.findById(teamId)
+				.orElseThrow(() -> new ResourceNotFoundException("Team not found with ID: " + teamId));
+
+		User invitee = userRepository.findById(inviteeId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + inviteeId));
+
+		User inviter = userRepository.findById(inviterId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + inviterId));
+
+		// Checking if the user is already part of the team
+		if (team.getRegisteredMembers().contains(invitee)) {
+			throw new IllegalArgumentException("User is already a member of the team.");
+		}
+
+		userRepository.sendTeamRequest(inviterId, inviteeId, teamId, status);
+
+	}
+
+	// Accept Team Join Request
+	@Override
+	public void acceptTeamJoinRequest(Long requestId) {
+		userRepository.acceptTeamRequest(requestId);
+	}
+
+	// Reject Team Join Request
+	@Override
+	public void rejectTeamJoinRequest(Long requestId) {
+		userRepository.rejectTeamRequest(requestId);
+	}
+
+	// Count Users by Role
+	@Override
+	public long countUsersByRole(UserRole role) {
+		return userRepository.countByRole(role);
+	}
+
+	// Count Users with Teams
+	@Override
+	public long countUsersWithTeams() {
+		return userRepository.countUsersWithTeams();
+	}
+
+	// Find Most Active Team Creators
+	@Override
+	public Page<UserSummaryDTO> findMostActiveTeamCreators(Pageable pageable) {
+		try {
+			return userRepository.findMostActiveTeamCreators(pageable)
+					.map(user -> modelMapper.map(user, UserSummaryDTO.class));
+		} catch (Exception e) {
+			throw new RuntimeException("Error while fetching most active team creators: " + e.getMessage());
+		}
+	}
+
+	// Find Highly Engaged Users
+	@Override
+	public List<UserSummaryDTO> findHighlyEngagedUsers(int notificationCount) {
+		try {
+			return userRepository.findHighlyEngagedUsers(notificationCount).stream()
+					.map(user -> modelMapper.map(user, UserSummaryDTO.class)).collect(Collectors.toList());
+		} catch (Exception e) {
+			throw new RuntimeException("Error while fetching highly engaged users: " + e.getMessage());
+		}
+	}
+
+	@Transactional
+	@Override
+	public void createTeam(User creator, TeamCreateDTO teamDTO) {
+		if (teamRepository.existsByNameIgnoreCase(teamCreateDTO.getName())) {
+			throw new IllegalArgumentException("Team name already exists");
+		}
+
+		Team team = modelMapper.map(teamDTO, Team.class);
+		team.setCreater(creator); // Set the user as the creator of the team
+		teamRepository.save(team);
+	}
+
+//	@Transactional
+//	@Override
+//	public void sendChallenge(Long userId, Long teamIdToChallenge, ChallengeResponseDTO challengeResponseDTO) {
+//		User user = userRepository.findById(userId)
+//				.orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+//
+//		Team userTeam = teamRepository.findById(teamIdToChallenge)
+//				.orElseThrow(() -> new ResourceNotFoundException("Team not found with ID: " + teamIdToChallenge));
+//
+//		// Ensure that the user belongs to the team they're sending the challenge from
+//		Team opponentTeam = teamRepository.findById(teamIdToChallenge).orElseThrow(
+//				() -> new ResourceNotFoundException("Opponent team not found with ID: " + teamIdToChallenge));
+//		if (userTeam == null) {
+//			throw new IllegalArgumentException("User is not a member of any team");
+//		}
+//
+//		Challenge challenge = modelMapper.map(challengeResponseDTO, Challenge.class);
+//		challenge.setChallenger(userTeam);
+//		challenge.setOpponent(opponentTeam);
+//		challenge.setStatus(RequestStatus.PENDING);
+//		challengeRepository.save(challenge);
+//	}
+
+	@Override
+	public List<ChallengeResponseDTO> getChallengesSentByUser(Long userId) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+
+		Team userTeam = teamRepository.findByCreater(user);
+		if (userTeam == null) {
+			throw new IllegalArgumentException("User is not part of any team");
+		}
+
+		List<Challenge> challenges = challengeRepository.findByChallenger(userTeam);
+		return modelMapper.map(challenges, List.class);
+	}
+
+	@Override
+	public List<ChallengeResponseDTO> getChallengesReceivedByUser(Long userId) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+
+		Team userTeam = teamRepository.findByCreater(user);
+		if (userTeam == null) {
+			throw new IllegalArgumentException("User is not part of any team");
+		}
+
+		List<Challenge> challenges = challengeRepository.findByOpponent(userTeam);
+		return modelMapper.map(challenges, List.class);
+	}
+
+	@Override
+	public Page<TeamRequestDTO> getJoinRequests(Long teamId, Pageable pageable) {
+		Team team = teamRepository.findById(teamId)
+				.orElseThrow(() -> new ResourceNotFoundException("Team not found with ID: " + teamId));
+
+		Page<TeamRequest> teamRequests = teamRequestRepository.findByTeam(team, pageable);
+		return teamRequests.map(request -> modelMapper.map(request, TeamRequestDTO.class));
+	}
+
+	@Override
+	public void respondToChallenge(Long userId, Long challengeId, RequestStatus responseStatus) {
+
+	    // Fetch the challenge using challengeService
+	    Challenge challenge = challengeService.getChallengeById(challengeId);
+
+	    // Ensure the user is the opponent of the challenge
+	    if (!challenge.getOpponent().getId().equals(userId)) {
+	        throw new BadRequestException("Only the opponent can respond to the challenge.");
+	    }
+
+	    // Ensure the challenge is still in PENDING state
+	    if (challenge.getStatus() != RequestStatus.PENDING) {
+	        throw new BadRequestException("Challenge is already processed.");
+	    }
+
+	    // Update the status of the challenge
+	    challengeService.updateChallengeStatus(challengeId, responseStatus);
+
+	}
+
+
+
+	@Override
+	public List<ChallengeResponseDTO> getPendingChallenges(Long userId) {
+
+	    List<Challenge> pendingChallenges = challengeService.getPendingChallengesByUserId(userId);
+
+	    return pendingChallenges.stream()
+	            .map(challenge -> modelMapper.map(challenge, ChallengeResponseDTO.class))
+	            .collect(Collectors.toList());
+	}
+
+	
+	   
+
+	@Override
+    public List<ChallengeResponseDTO> getUserChallenges(Long userId) {
+        List<Challenge> challenges = challengeService.getUserChallenges(userId);
+        return challenges.stream()
+                .map(challenge -> modelMapper.map(challenge, ChallengeResponseDTO.class))
+                .collect(Collectors.toList());
+    }
+
+	@Override
+    public ChallengeResponseDTO sendChallenge(Long challengerId, Long opponentId) {
+
+		Team challengerTeam = challengeService.getChallengerTeamByChallengeId(challengerId);
+		Team opponentTeam = challengeService.getOpponentTeamByChallengeId(opponentId);
+        Challenge challenge = new Challenge();
+        challenge.setChallenger(challengerTeam);
+        challenge.setOpponent(opponentTeam);
+        challenge.setStatus(RequestStatus.PENDING);
+
+        Challenge savedChallenge = challengeService.createChallenge(challenge);
+        return modelMapper.map(savedChallenge, ChallengeResponseDTO.class);
+    }
+
+	    @Override
+	    public void acceptChallenge(Long userId, Long challengeId) {
+	        Challenge challenge = challengeService.getChallengeById(challengeId);
+	        validateChallenge(challenge, userId);
+
+	        if (challenge.getStatus() != RequestStatus.PENDING) {
+	            throw new BadRequestException("Challenge is already processed");
+	        }
+
+	        challengeService.updateChallengeStatus(challengeId, RequestStatus.ACCEPTED);
+	    }
+
+	    @Override
+	    public void rejectChallenge(Long userId, Long challengeId) {
+
+	        Challenge challenge = challengeService.getChallengeById(challengeId);
+	        validateChallenge(challenge, userId);
+
+	        if (challenge.getStatus() != RequestStatus.PENDING) {
+	            throw new BadRequestException("Challenge is already processed");
+	        }
+
+	        challengeService.updateChallengeStatus(challengeId, RequestStatus.REJECTED);
+	    }
+
+	    @Override
+	    public void cancelChallenge(Long userId, Long challengeId) {
+
+	        Challenge challenge = challengeService.getChallengeById(challengeId);
+
+	        if (!challenge.getChallenger().getId().equals(userId)) {
+	            throw new BadRequestException("Only the challenger can cancel the challenge");
+	        }
+
+	        if (challenge.getStatus() != RequestStatus.PENDING) {
+	            throw new BadRequestException("Challenge is already processed");
+	        }
+
+	        challengeService.updateChallengeStatus(challengeId, RequestStatus.CANCELLED);
+	    }
+
+	    @Override
+	    public void completeChallenge(Long userId, Long challengeId) {
+
+	        Challenge challenge = challengeService.getChallengeById(challengeId);
+
+	        if (challenge.getStatus() != RequestStatus.ACCEPTED) {
+	            throw new BadRequestException("Challenge must be accepted before completion");
+	        }
+
+	        challengeService.updateChallengeStatus(challengeId, RequestStatus.COMPLETED);
+	    }
+
+	    private void validateChallenge(Challenge challenge, Long userId) {
+	        if (!challenge.getOpponent().equals(userId)) {
+	            throw new BadRequestException("User is not authorized to accept/reject this challenge");
+	        }
+	    }
+	
+
+
+}

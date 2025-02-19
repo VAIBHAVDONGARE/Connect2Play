@@ -1,0 +1,5 @@
+package com.connect2play.config;
+
+public class SecurityConfig extends WebSecurityConfigurerAdapter{
+
+}

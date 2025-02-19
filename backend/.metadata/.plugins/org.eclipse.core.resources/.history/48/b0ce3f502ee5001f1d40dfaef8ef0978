@@ -1,0 +1,73 @@
+package com.connect2play.repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import com.connect2play.entities.Challenge;
+import com.connect2play.entities.RequestStatus;
+import com.connect2play.entities.Team;
+
+public interface IChallengeRepository extends JpaRepository<Challenge, Long> {
+
+    List<Challenge> findByChallenger(Team challenger);
+    
+    List<Challenge> findByOpponent(Team challenger);
+
+        // Find a challenge by ID
+        Optional<Challenge> findById(Long challengeId);
+
+        // Find all challenges created by a specific user
+        @Query("SELECT c FROM Challenge c WHERE c.creator.id = :userId")
+        List<Challenge> findChallengesByCreator(@Param("userId") Long userId);
+
+        // Find all challenges where a specific user is a participant
+        @Query("SELECT c FROM Challenge c JOIN c.participants p WHERE p.id = :userId")
+        List<Challenge> findChallengesByParticipant(@Param("userId") Long userId);
+
+        // Find all challenges where a specific user is either the creator or a participant
+        @Query("SELECT c FROM Challenge c WHERE c.creator.id = :userId OR EXISTS (SELECT p FROM c.participants p WHERE p.id = :userId)")
+        List<Challenge> findAllUserChallenges(@Param("userId") Long userId);
+
+        // Find challenges that are open for participation
+        @Query("SELECT c FROM Challenge c WHERE c.status = 'OPEN'")
+        List<Challenge> findOpenChallenges();
+
+
+        // Delete a challenge by ID
+        @Modifying
+        @Query("DELETE FROM Challenge c WHERE c.id = :challengeId")
+        void deleteChallengeById(@Param("challengeId") Long challengeId);
+
+            // Fetch all challenges sent by a team
+            List<Challenge> findBySenderTeamId(Long senderTeamId);
+
+            // Fetch all challenges received by a team
+            List<Challenge> findByReceiverTeamId(Long receiverTeamId);
+
+            // Fetch all pending challenges for a specific team
+            List<Challenge> findByReceiverTeamIdAndStatus(Long receiverTeamId, RequestStatus status);
+
+            // Fetch all accepted challenges for a specific team
+            List<Challenge> findByChallengeIdrAndStatusOrOpponentIdAndStatus(
+                Long challenger, RequestStatus status1,
+                Long opponent, RequestStatus status2
+            );
+
+            // Update challenge status (Accepted/Rejected/Completed)
+            @Modifying
+            @Query("UPDATE Challenge c SET c.status = :status WHERE c.id = :challengeId")
+            void updateChallengeStatus(@Param("challengeId") Long challengeId, @Param("status") RequestStatus status);
+        
+            @Query("SELECT c FROM Challenge c WHERE (c.challenger.id = :team1Id AND c.opponent.id = :team2Id) OR (c.challenger.id = :team2Id AND c.opponent.id = :team1Id)")
+            List<Challenge> findChallengesBetweenTeams(@Param("team1Id") Long team1Id, @Param("team2Id") Long team2Id);
+
+
+
+
+}

@@ -1,0 +1,83 @@
+package com.connect2play.controller;
+
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.connect2play.dto.TeamRequestCreateDTO;
+import com.connect2play.dto.TeamRequestDTO;
+import com.connect2play.dto.TeamRequestResponseDTO;
+import com.connect2play.service.ITeamRequestService;
+
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/api/team-requests")
+@RequiredArgsConstructor
+public class TeamRequestController {
+
+    private final ITeamRequestService teamRequestService;
+
+    // Send a request to join a team
+    @PostMapping("/join")
+    public ResponseEntity<TeamRequestCreateDTO> sendJoinRequest(
+            @RequestParam Long userId,
+            @RequestParam Long teamId,
+            @RequestParam(required = false) String responseMessage) {
+        return ResponseEntity.ok(teamRequestService.sendJoinRequest(userId, teamId, responseMessage));
+    }
+
+    // Send an invite to a user
+    @PostMapping("/invite")
+    public ResponseEntity<TeamRequestDTO> sendTeamInvite(
+            @RequestParam Long creatorId,
+            @RequestParam Long userId,
+            @RequestParam Long teamId,
+            @RequestParam(required = false) String responseMessage) {
+        return ResponseEntity.ok(teamRequestService.sendTeamInvite(creatorId, userId, teamId, responseMessage));
+    }
+
+    // Accept a team request
+    @PutMapping("/{requestId}/accept")
+    public ResponseEntity<Void> acceptRequest(
+            @PathVariable Long requestId,
+            @RequestParam(required = false) String responseMessage) {
+        teamRequestService.acceptRequest(requestId, responseMessage);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Reject a team request
+    @PutMapping("/{requestId}/reject")
+    public ResponseEntity<Void> rejectRequest(
+            @PathVariable Long requestId,
+            @RequestParam(required = false) String responseMessage) {
+        teamRequestService.rejectRequest(requestId, responseMessage);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Cancel a team request
+    @PutMapping("/{requestId}/cancel")
+    public ResponseEntity<Void> cancelRequest(@PathVariable Long requestId) {
+        teamRequestService.cancelRequest(requestId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Get pending requests for a team
+    @GetMapping("/team/{teamId}/pending")
+    public ResponseEntity<List<TeamRequestResponseDTO>> getPendingRequestsForTeam(@PathVariable Long teamId) {
+        return ResponseEntity.ok(teamRequestService.getPendingRequestsForTeam(teamId));
+    }
+
+    // Get pending requests for a user
+    @GetMapping("/user/{userId}/pending")
+    public ResponseEntity<List<TeamRequestResponseDTO>> getUserPendingRequests(@PathVariable Long userId) {
+        return ResponseEntity.ok(teamRequestService.getUserPendingRequests(userId));
+    }
+}

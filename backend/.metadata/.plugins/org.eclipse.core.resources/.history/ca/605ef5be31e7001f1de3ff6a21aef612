@@ -1,0 +1,14 @@
+package com.connect2play.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.connect2play.entities.Turf;
+import com.connect2play.entities.TurfImage;
+
+public interface ITurfImageRepository extends JpaRepository<TurfImage, Long> {
+	List<TurfImage> findByTurfId(Long turfId);
+
+    void deleteByTurfId(Long turfId);
+}

@@ -1,0 +1,50 @@
+package com.connect2play.service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.connect2play.dto.NotificationResponseDTO;
+import com.connect2play.entities.Notification;
+import com.connect2play.entities.User;
+import com.connect2play.exception.ResourceNotFoundException;
+import com.connect2play.repository.INotificationRepository;
+import com.connect2play.repository.IUserRepository;
+@Service
+@Transactional
+public class NotificationServiceImpl implements INotificationService{
+	@Autowired
+	private INotificationRepository notificationRepository;
+	@Autowired
+	private IUserRepository userRepository;
+	
+	@Override
+    @Transactional
+    public Notification createNotification(NotificationResponseDTO notificationDTO) {
+        User user = userRepository.findById(notificationDTO.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + notificationDTO.getUserId()));
+
+        Notification notification = new Notification();
+        notification.setUser(user);
+        notification.setType(notificationDTO.getType());
+        notification.setTitle(notificationDTO.getTitle());
+        notification.setMessage(notificationDTO.getMessage());
+        notification.setRelatedId(notificationDTO.getRelatedId());
+        notification.setRelatedType(notificationDTO.getRelatedType());
+        notification.setSentTime(LocalDateTime.now());
+        notification.setRead(false);
+        notification.setDeleted(false);
+
+        return notificationRepository.save(notification);
+    }
+	
+	 @Override
+	    public List<NotificationResponseDTO> getUserNotifications(Long userId) {
+	        List<Notification> notifications = notificationRepository.findByUserIdOrderBySentTimeDesc(userId);
+	        return notifications.stream().map(this::mapToDTO).collect(Collectors.toList());
+	    }
+}

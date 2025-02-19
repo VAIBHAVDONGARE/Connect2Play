@@ -1,0 +1,76 @@
+package com.connect2play.service;
+
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import com.connect2play.dto.ApiResponseDTO;
+import com.connect2play.dto.FriendRequestResponseDTO;
+import com.connect2play.dto.NotificationResponseDTO;
+import com.connect2play.dto.TeamDetailsDTO;
+import com.connect2play.dto.TeamRequestCreateDTO;
+import com.connect2play.dto.UserRegistrationDTO;
+import com.connect2play.dto.UserDetailsResponseDTO;
+import com.connect2play.dto.UserFullDetailsResponseDTO;
+import com.connect2play.dto.UserSummaryDTO;
+import com.connect2play.entities.Gender;
+import com.connect2play.entities.User;
+import com.connect2play.entities.UserRole;
+//Jay Shree Ram
+public interface IUserService {
+
+
+	    // User Authentication & Account Management
+	    ApiResponseDTO registerUser(UserRegistrationDTO userRegistrationDTO);
+	    UserFullDetailsResponseDTO findUserByEmail(String email);
+	    boolean isEmailTaken(String email);
+	    void deleteUser(Long userId);
+	    
+	    // User Profile
+	    UserDetailsResponseDTO updateProfile(Long userId, UserRegistrationDTO updatedUserDTO);
+	    UserFullDetailsResponseDTO getUserById(Long userId);
+	    List<UserSummaryDTO> findUsersWithoutProfileImage();
+	    List<UserSummaryDTO> findUsersWithBio();
+
+	    // Searching & Filtering Users
+	    Page<UserSummaryDTO> searchUsers(String fullName, UserRole role, Gender gender, Pageable pageable);
+	    Page<UserSummaryDTO> findUsersByName(String name, Pageable pageable);
+
+	    // Team Management
+	    boolean hasUserCreatedTeams(Long userId);
+	    Optional<UserSummaryDTO> findTeamCreator(Long teamId);
+	    List<UserSummaryDTO> findUsersWithTeams();
+
+	    // Friend Request Handling
+	    List<FriendRequestResponseDTO> getPendingFriendRequests(Long userId);
+	    long countPendingFriendRequests(Long userId);
+	    void sendFriendRequest(Long senderId, Long receiverId);
+	    void acceptFriendRequest(Long requestId);
+	    void rejectFriendRequest(Long requestId);
+
+	    // Notifications
+	    long countUnreadNotifications(Long userId);
+	    List<NotificationResponseDTO> getUserNotifications(Long userId);
+	    void markNotificationsAsRead(Long userId);
+
+	    // Team Requests
+	    long countPendingTeamRequests(Long userId);
+	    void sendTeamJoinRequest(TeamRequestCreateDTO teamRequestCreateDTO);
+	    void acceptTeamJoinRequest(Long requestId);
+	    void rejectTeamJoinRequest(Long requestId);
+
+	    // Statistics
+	    long countUsersByRole(UserRole role);
+	    long countUsersWithTeams();
+	    Page<UserSummaryDTO> findMostActiveTeamCreators(Pageable pageable);
+
+	    // User Engagement
+	    List<UserSummaryDTO> findHighlyEngagedUsers(int notificationCount);
+	    
+	    public void createTeam(User creator, TeamDetailsDTO teamDTO);
+	    public void sendChallenge(Long userId, Long teamIdToChallenge);
+
+}

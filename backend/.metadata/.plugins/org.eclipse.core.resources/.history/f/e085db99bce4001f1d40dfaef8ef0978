@@ -1,0 +1,93 @@
+package com.connect2play.entities;
+
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+@Entity
+@Table(name = "friend_requests", 
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_friend_request_sender_receiver",
+        columnNames = { "sender_id", "receiver_id" }
+    ),
+    indexes = {
+        @Index(name = "idx_friend_request_sender", columnList = "sender_id"),
+        @Index(name = "idx_friend_request_receiver", columnList = "receiver_id"),
+        @Index(name = "idx_friend_request_status", columnList = "status"),
+        @Index(name = "idx_friend_request_sent_time", columnList = "sent_time")
+    })
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@ToString(exclude = { "sender", "receiver" }) 
+public class FriendRequest extends BaseEntity {  
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sender_id", nullable = false, foreignKey = @ForeignKey(name = "fk_friend_request_sender"))
+    private User sender;
+
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receiver_id", nullable = false, foreignKey = @ForeignKey(name = "fk_friend_request_receiver"))
+    private User receiver;
+
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private RequestStatus status = RequestStatus.PENDING;  
+
+    @CreationTimestamp
+    @Column(name = "sent_time", nullable = false, updatable = false)
+    private LocalDateTime sentTime;
+
+    @UpdateTimestamp
+    @Column(name = "last_modified_time")
+    private LocalDateTime lastModifiedTime;
+
+    @Column(name = "response_time")
+    private LocalDateTime responseTime;
+
+    @Column(name = "response_message", length = 500)
+    private String responseMessage;
+
+    @PrePersist  
+    @PreUpdate
+    private void validateRequest() {
+        if (sender != null && receiver != null && sender.getId().equals(receiver.getId())) {
+            throw new IllegalArgumentException("Cannot send friend request to yourself");
+        }
+    }
+    @PreUpdate
+    private void setResponseTime() {
+        if (status != RequestStatus.PENDING) {
+            this.responseTime = LocalDateTime.now();
+        }
+    }
+
+}
+

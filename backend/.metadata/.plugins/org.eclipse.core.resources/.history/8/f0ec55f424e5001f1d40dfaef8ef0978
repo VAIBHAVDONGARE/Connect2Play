@@ -1,0 +1,16 @@
+package com.connect2play.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.connect2play.entities.FriendRequest;
+import com.connect2play.entities.RequestStatus;
+import com.connect2play.entities.User;
+
+public interface IFriendRequestService extends JpaRepository<FriendRequest, Long>{
+	Optional<FriendRequest> findBySenderAndReceiver(User sender, User receiver);
+    List<FriendRequest> findByReceiverAndStatus(User receiver, RequestStatus status);
+
+}

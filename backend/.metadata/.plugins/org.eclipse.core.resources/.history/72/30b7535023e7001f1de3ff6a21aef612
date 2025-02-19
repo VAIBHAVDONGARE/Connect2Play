@@ -1,0 +1,211 @@
+package com.connect2play.repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.connect2play.entities.Challenge;
+import com.connect2play.entities.FriendRequest;
+import com.connect2play.entities.Gender;
+import com.connect2play.entities.Notification;
+import com.connect2play.entities.TeamRequest;
+import com.connect2play.entities.User;
+import com.connect2play.entities.UserRole;
+
+
+@Repository
+public interface IUserRepository extends JpaRepository<User, Long> {
+    // Essential authentication & user management
+    Optional<User> findByEmail(String email);
+    boolean existsByEmail(String email);
+   // boolean existsByEmail(long userId);
+    
+    Optional<User> findById(Long userId);
+    
+    // User search with pagination
+    Page<User> findByFullNameContainingIgnoreCase(String fullName, Pageable pageable);
+    
+    // Team management Finding Team Creator
+    @Query("SELECT u FROM User u WHERE EXISTS (SELECT t FROM Team t WHERE t.creator.id = u.id AND t.id = :teamId)")
+    Optional<User> findTeamCreator(@Param("teamId") Long teamId);
+    
+    boolean existsByTeamsCreated_Id(Long teamId); 
+    
+    @Query("SELECT COUNT(t) > 0 FROM Team t WHERE t.creator.id = :userId")
+    boolean hasCreatedTeams(@Param("userId") Long userId);
+    
+    @Query("SELECT u FROM User u WHERE SIZE(u.teamsCreated) > 0")
+    List<User> findUsersWithTeams();
+    
+//    // Friend request queries
+//    @Query("SELECT u FROM User u WHERE u.id IN " +
+//           "(SELECT fr.sender.id FROM FriendRequest fr WHERE fr.receiver.id = :userId AND fr.status = 'PENDING')")
+//    List<User> findPendingFriendRequestUsers(@Param("userId") Long userId);
+    
+    // Combined query for pending friend and team requests
+    @Query("SELECT u FROM User u WHERE u.id IN " +
+           "(SELECT fr.sender.id FROM FriendRequest fr WHERE fr.receiver.id = :userId AND fr.status = 'PENDING') " +
+           "OR u.id IN (SELECT tr.createdBy.id FROM TeamRequest tr WHERE tr.receiverId.id = :userId AND tr.status = 'PENDING')")
+    List<User> findPendingRequests(@Param("userId") Long userId);
+    
+    // Method to send a friend request (create a new record in the friend request table)
+//    @Modifying
+//    @Transactional
+//    @Query("INSERT INTO FriendRequest (senderId, receiverId, status) VALUES (:senderId, :receiverId, 'PENDING')")
+//    void sendFriendRequest(@Param("senderId") Long senderId, @Param("receiverId") Long receiverId);
+//    
+    // Method to accept a friend request (update the status in the friend request table)
+//    @Modifying
+//    @Transactional
+//    @Query("UPDATE FriendRequest fr SET fr.status = 'ACCEPTED' WHERE fr.id = :requestId")
+//    void acceptFriendRequest(@Param("requestId") Long requestId);
+
+    // Method to reject a friend request (update the status in the friend request table)
+//    @Modifying
+//    @Transactional
+//    @Query("UPDATE FriendRequest fr SET fr.status = 'REJECTED' WHERE fr.id = :requestId")
+//    void rejectFriendRequest(@Param("requestId") Long requestId);
+    
+    @Query("SELECT COUNT(fr) FROM FriendRequest fr WHERE fr.receiver.id = :userId AND fr.status = 'PENDING'")
+    long countPendingFriendRequests(@Param("userId") Long userId);
+     //long countByReceivedFriendRequests_StatusAndId(String status, Long userId); // Optimized
+
+    
+    // Role-based queries
+    List<User> findByRole(UserRole role);
+    
+    // Profile queries
+    @Query("SELECT u FROM User u WHERE u.profileImageUrl IS NULL")
+    List<User> findUsersWithoutProfileImage();
+    //Find users without profile images (Optimized)
+   // List<User> findByProfileImageUrlIsNull();
+    
+    @Query("SELECT u FROM User u WHERE u.bio IS NOT NULL AND LENGTH(u.bio) > 0")
+    List<User> findUsersWithBio();
+    //Find users with a bio (Optimized)
+    //List<User> findByBioIsNotNullAndBioNotEmpty();
+    
+    // Notification related
+    @Query("SELECT COUNT(n) FROM User u JOIN u.notifications n WHERE u.id = :userId AND n.isRead = false")
+    long countUnreadNotifications(@Param("userId") Long userId);
+    
+ // Method to get user notifications
+    @Query("SELECT n FROM Notification n WHERE n.user.id = :userId AND n.isRead = false")
+    List<Notification> getUserNotifications(@Param("userId") Long userId);
+
+    // Method to mark notifications as read
+    @Modifying
+    @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.id = :userId")
+    void markNotificationsAsRead(@Param("userId") Long userId);
+    
+    // Team request related
+    //@Query("SELECT COUNT(tr) FROM User u JOIN u.receivedTeamRequests tr " +
+           //"WHERE u.id = :userId AND tr.status = 'PENDING'")
+    //long countPendingTeamRequests(@Param("userId") Long userId);
+ // Method to send a team join request
+    // Query to insert a new team request with the inviter, invitee, team, and status
+//    @Modifying
+//    @Query("INSERT INTO TeamRequest (creater_id, requested_user_id, teamId, status) " +
+//           "VALUES (:creater_id, :requested_user_id, :teamId, :status)")
+//    void sendTeamRequest(@Param("creater_id") Long inviterId,
+//                         @Param("requested_user_id") Long inviteeId,
+//                         @Param("teamId") Long teamId,
+//                         @Param("status") String status); // 'PENDING' or any status you pass
+
+    // Method to accept a team join request
+    @Modifying
+    @Transactional
+    @Query("UPDATE TeamRequest t SET t.status = 'ACCEPTED' WHERE t.id = :requestId")
+    void acceptTeamRequest(@Param("requestId") Long requestId);
+
+    // Method to reject a team join request
+    @Modifying
+    @Transactional
+    @Query("UPDATE TeamRequest t SET t.status = 'REJECTED' WHERE t.id = :requestId")
+    void rejectTeamRequest(@Param("requestId") Long requestId);
+    
+//    @Query("SELECT COUNT(tr) FROM TeamRequest tr WHERE tr.requestedUser.id = :userId AND tr.status = 'PENDING'")
+//    long countPendingTeamRequests(@Param("userId") Long userId);
+    
+    // Advanced search
+    @Query("SELECT DISTINCT u FROM User u " +
+           "WHERE (:fullName IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :fullName, '%'))) " +
+           "AND (:role IS NULL OR u.role = :role) " +
+           "AND (:gender IS NULL OR u.gender = :gender)")
+    Page<User> searchUsers(@Param("fullName") String fullName, 
+                          @Param("role") UserRole role,
+                          @Param("gender") Gender gender,
+                          Pageable pageable);
+
+    // Statistics queries
+    @Query("SELECT COUNT(u) FROM User u WHERE u.role = :role")
+    long countByRole(@Param("role") UserRole role);
+    
+    @Query("SELECT COUNT(u) FROM User u WHERE SIZE(u.teamsCreated) > 0")
+    long countUsersWithTeams();
+   // long countByTeamsCreatedIsNotEmpty(); // Optimized
+//    
+//    Page<User> findAllByOrderByTeamsCreatedDesc(Pageable pageable);
+
+//    //Turf Registration (NEW)
+//    @Query("SELECT COUNT(t) FROM Turf t WHERE t.owner.id = :userId")
+//    long countUserOwnedTurfs(@Param("userId") Long userId);
+    
+    
+    // User activity queries
+    @Query("SELECT u FROM User u ORDER BY SIZE(u.teamsCreated) DESC")
+    Page<User> findMostActiveTeamCreators(Pageable pageable);
+    
+//    Both queries aim to retrieve users who have more than a certain number of notifications,
+//    but they differ in their efficiency and how they interact with the database
+   // @Query("SELECT u FROM User u WHERE SIZE(u.notifications) > :notificationCount")
+    //List<User> findHighlyEngagedUsers(@Param("notificationCount") int notificationCount);
+   // List<User> findByNotificationsCountGreaterThan(int notificationCount); // Optimized
+    
+    
+////    Team Challenges
+//    @Query("SELECT COUNT(c) FROM Challenge c WHERE c.challenger.id = :userId OR c.opponent.id = :userId")
+//    long countTeamChallenges(@Param("userId") Long userId);
+//
+//    @Query("SELECT c FROM Challenge c WHERE c.challenger.id = :userId OR c.opponent.id = :userId ORDER BY c.createdAt DESC")
+//    List<User> findUserChallengesForUser(@Param("userId") Long userId);
+    
+    // Custom method to find highly engaged users based on the number of notifications
+    @Query("SELECT u FROM User u WHERE (SELECT COUNT(n) FROM Notification n WHERE n.user.id = u.id) >= :notificationCount")
+    List<User> findHighlyEngagedUsers(@Param("notificationCount") int notificationCount);
+
+ // Find all accepted friends for a user
+//    @Query("SELECT u FROM User u WHERE u.id IN " +
+//           "(SELECT fr.sender.id FROM FriendRequest fr WHERE fr.receiver.id = :userId AND fr.status = 'ACCEPTED')" +
+//           "OR u.id IN (SELECT fr.receiver.id FROM FriendRequest fr WHERE fr.sender.id = :userId AND fr.status = 'ACCEPTED')")
+//    List<User> findAcceptedFriends(@Param("userId") Long userId);
+
+//    // Check if a friend request already exists between two users
+//    @Query("SELECT fr FROM FriendRequest fr WHERE (fr.sender.id = :senderId AND fr.receiver.id = :receiverId) OR (fr.sender.id = :receiverId AND fr.receiver.id = :senderId)")
+//    Optional<FriendRequest> findExistingFriendRequest(@Param("senderId") Long senderId, @Param("receiverId") Long receiverId);
+
+ // Get pending team join requests for a user
+//    @Query("SELECT tr FROM TeamRequest tr WHERE tr.receiver.id = :userId AND tr.status = 'PENDING'")
+//    List<TeamRequest> findPendingTeamRequests(@Param("userId") Long userId);
+
+//    // Get accepted team join requests for a user
+//    @Query("SELECT tr FROM TeamRequest tr WHERE tr.receiver.id = :userId AND tr.status = 'ACCEPTED'")
+//    List<TeamRequest> findAcceptedTeamRequests(@Param("userId") Long userId);
+
+ // Get all challenges sent or received by a user
+//    @Query("SELECT c FROM Challenge c WHERE c.challenger.id = :userId OR c.opponent.id = :userId")
+//    List<Challenge> findUserChallenges(@Param("userId") Long userId);
+
+//    // Count the number of challenges a user has sent or received
+//    @Query("SELECT COUNT(c) FROM ChallengeRequest c WHERE c.challenger.id = :userId OR c.opponent.id = :userId")
+//    long countUserChallenges(@Param("userId") Long userId);
+
+}

@@ -1,0 +1,29 @@
+package com.connect2play.dto;
+
+import java.time.LocalDateTime;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ApiResponseDTO<T> {
+	public ApiResponseDTO(String message, LocalDateTime timeStamp) {
+		super();
+		this.message = message;
+		this.timeStamp = timeStamp;
+	}
+	private boolean success;
+	private String message;
+	private LocalDateTime timeStamp;
+	private T data;
+	public ApiResponseDTO(String message) {
+		super();
+		this.message = message;
+		timeStamp=LocalDateTime.now();
+	}
+}

@@ -1,0 +1,15 @@
+package com.connect2play.service;
+
+import com.connect2play.dto.TeamRequestCreateDTO;
+import com.connect2play.dto.TeamRequestDTO;
+
+public interface ITeamRequestService {
+	public TeamRequestCreateDTO sendJoinRequest(Long userId, Long teamId);
+
+	public TeamRequestDTO sendTeamInvite(Long creatorId, Long userId, Long teamId);
+	
+    public void acceptRequest(Long requestId);
+
+
+
+}

@@ -1,0 +1,31 @@
+package com.connect2play.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import com.connect2play.dto.TeamDTO;
+import com.connect2play.entities.Sports;
+
+public interface ITeamService {
+
+    // Fetch a team by its ID
+    Optional<TeamDTO> getTeamById(Long teamId);
+
+    // Fetch all teams with pagination
+    Page<TeamDTO> getAllTeams(Pageable pageable);
+
+    // Search teams by multiple filters
+    Page<TeamDTO> searchTeams(String name, Sports sportType, Integer minMembers, Integer minWins, Integer maxLosses, Integer minPoints, Pageable pageable);
+
+    // Create a new team (check if the name already exists)
+    void createTeam(TeamDTO teamDTO);
+
+    // Fetch teams that sent challenges to the user
+    List<TeamDTO> getTeamsThatSentChallenges(Long userId);
+
+    // Fetch teams that received challenges from the user
+    List<TeamDTO> getTeamsThatReceivedChallenges(Long userId);
+}

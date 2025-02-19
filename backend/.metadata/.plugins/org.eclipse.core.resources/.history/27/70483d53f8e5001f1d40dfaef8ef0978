@@ -1,0 +1,59 @@
+package com.connect2play.repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import com.connect2play.entities.Sports;
+import com.connect2play.entities.Turf;
+
+@Repository
+public interface ITurfRepository extends JpaRepository<Turf, Long> {
+
+	// Fetch all active turfs
+	List<Turf> findByActiveTrue();
+
+	// Fetch all turfs owned by a specific user
+	List<Turf> findByOwnerIdAndActiveTrue(Long ownerId);
+
+	// Search by city
+	List<Turf> findByCityIgnoreCaseAndActiveTrue(String city);
+
+	// Search by state
+	List<Turf> findByStateIgnoreCaseAndActiveTrue(String state);
+
+	// Find a turf by name (Case-Insensitive)
+	Optional<Turf> findByNameIgnoreCase(String name);
+
+	// Search turfs within a price range
+	List<Turf> findByPricePerHourBetweenAndActiveTrue(Double minPrice, Double maxPrice);
+
+	// Custom query to fetch turfs near a location using latitude & longitude
+	@Query("SELECT t FROM Turf t WHERE t.active = true AND "
+			+ "ABS(t.latitude - :latitude) <= 0.1 AND ABS(t.longitude - :longitude) <= 0.1")
+	List<Turf> findNearbyTurfs(Double latitude, Double longitude);
+
+	// Full-text search: Turf name, city, state, and facilities
+	@Query("SELECT t FROM Turf t WHERE t.active = true AND " + "(LOWER(t.name) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+			+ "OR LOWER(t.city) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+			+ "OR LOWER(t.state) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+			+ "OR LOWER(t.facilities) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+	List<Turf> searchTurfs(String keyword);
+
+	// Search Turf by Pincode
+	List<Turf> findByPincodeAndActiveTrue(String pincode);
+	
+	@Query("SELECT t FROM Turf t WHERE t.active = true AND " +
+		       "(6371 * acos(cos(radians(:latitude)) * cos(radians(t.latitude)) " +
+		       "* cos(radians(t.longitude) - radians(:longitude)) + sin(radians(:latitude)) " +
+		       "* sin(radians(t.latitude)))) <= 10")
+		List<Turf> findNearbyTurfs(Double latitude, Double longitude);
+
+	@Query("SELECT t FROM Turf t WHERE t.active = true AND " +
+		       "(t.pricePerHour BETWEEN :minPrice AND :maxPrice) AND t.sportType = :sportType")
+		List<Turf> filterTurfs(Double minPrice, Double maxPrice, Sports sportType);
+
+}

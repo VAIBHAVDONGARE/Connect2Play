@@ -1,0 +1,11 @@
+package com.connect2play.repository;
+
+import java.util.List;
+
+import com.connect2play.entities.TurfImage;
+
+public interface ITurfImageRepository {
+	List<TurfImage> findByTurfId(Long turfId);
+
+    void deleteByTurfId(Long turfId);
+}

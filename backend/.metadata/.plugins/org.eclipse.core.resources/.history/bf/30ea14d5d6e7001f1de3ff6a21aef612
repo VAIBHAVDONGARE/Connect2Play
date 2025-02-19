@@ -1,0 +1,64 @@
+package com.connect2play.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    private final JwtAuthenticationFilter jwtFilter;
+    private final CustomAuthenticationEntryPoint authEntry;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtFilter, CustomAuthenticationEntryPoint authEntry) {
+        this.jwtFilter = jwtFilter;
+        this.authEntry = authEntry;
+    }
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .cors().and() // Enable Cross-Origin Resource Sharing (CORS)
+            .csrf().disable() // Disable CSRF as we're using stateless JWT authentication
+            .exceptionHandling().authenticationEntryPoint(authEntry) // Custom authentication entry point for errors
+            .and()
+            .authorizeRequests()
+                .requestMatchers("/products/view", "/users/signup", "/users/signin", 
+                                 "/v*/api-doc*/**", "/swagger-ui/**").permitAll() // Public URLs
+                .requestMatchers(HttpMethod.OPTIONS).permitAll() // Allow pre-flight OPTIONS requests
+                .requestMatchers("/products/purchase").hasRole("CUSTOMER") // Only CUSTOMER role
+                .requestMatchers("/products/add").hasRole("ADMIN") // Only ADMIN role
+                .anyRequest().authenticated() // All other endpoints need authentication
+            .and()
+            .sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Stateless session
+            .and()
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class); // Add JWT filter before default filter
+    }
+
+    @Override
+    @Bean
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean(); // Provide AuthenticationManager as a Spring bean
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(); // Password Encoder for hashing passwords
+    }
+
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(userDetailsService()).passwordEncoder(passwordEncoder());
+    }
+}

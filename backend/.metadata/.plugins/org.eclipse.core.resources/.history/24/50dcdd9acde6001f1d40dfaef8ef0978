@@ -1,0 +1,277 @@
+//package com.connect2play.controller;
+//
+//import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.log;
+//
+//import java.util.List;
+//
+//import org.springframework.beans.factory.annotation.Autowired;
+//import org.springframework.data.domain.Page;
+//import org.springframework.data.domain.Pageable;
+//import org.springframework.http.HttpStatus;
+//import org.springframework.http.ResponseEntity;
+//import org.springframework.security.access.prepost.PreAuthorize;
+//import org.springframework.web.bind.annotation.DeleteMapping;
+//import org.springframework.web.bind.annotation.GetMapping;
+//import org.springframework.web.bind.annotation.PathVariable;
+//import org.springframework.web.bind.annotation.PostMapping;
+//import org.springframework.web.bind.annotation.PutMapping;
+//import org.springframework.web.bind.annotation.RequestBody;
+//import org.springframework.web.bind.annotation.RequestMapping;
+//import org.springframework.web.bind.annotation.RequestParam;
+//import org.springframework.web.bind.annotation.RestController;
+//
+//import com.connect2play.dto.ApiResponseDTO;
+//import com.connect2play.dto.FriendRequestResponseDTO;
+//import com.connect2play.dto.NotificationResponseDTO;
+//import com.connect2play.dto.UserDetailsResponseDTO;
+//import com.connect2play.dto.UserFullDetailsResponseDTO;
+//import com.connect2play.dto.UserRegistrationDTO;
+//import com.connect2play.dto.UserSummaryDTO;
+//import com.connect2play.entities.Gender;
+//import com.connect2play.entities.UserRole;
+//import com.connect2play.service.IUserService;
+//
+//import jakarta.validation.Valid;
+//
+//@RestController
+//@RequestMapping("/api/users")
+//public class UserController {
+//
+//    @Autowired
+//    private IUserService userService;
+//
+//    // ✅ Register User
+//    @PostMapping("/register")
+//    public ResponseEntity<ApiResponseDTO> registerUser(@Valid @RequestBody UserRegistrationDTO userDTO) {
+//        ApiResponseDTO response = userService.registerUser(userDTO);
+//        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+//    }
+//
+//    // ✅ Get User by Email
+//    @GetMapping("/email/{email}")
+//    public ResponseEntity<UserFullDetailsResponseDTO> getUserByEmail(@PathVariable String email) {
+//        return ResponseEntity.ok(userService.findUserByEmail(email));
+//    }
+//
+//    // ✅ Get User by ID
+//    @GetMapping("/{id}")
+//    public ResponseEntity<UserFullDetailsResponseDTO> getUserById(@PathVariable Long id) {
+//        return ResponseEntity.ok(userService.getUserById(id));
+//    }
+//
+//    // ✅ Check Email Availability
+//    @GetMapping("/check-email")
+//    public ResponseEntity<Boolean> isEmailTaken(@RequestParam String email) {
+//        return ResponseEntity.ok(userService.isEmailTaken(email));
+//    }
+//
+//    // ✅ Update User Profile
+//    @PutMapping("/{id}")
+//    public ResponseEntity<UserDetailsResponseDTO> updateProfile(@PathVariable Long id, 
+//            @Valid @RequestBody UserRegistrationDTO userDTO) {
+//        return ResponseEntity.ok(userService.updateProfile(id, userDTO));
+//    }
+//
+//    // ✅ Delete User
+//    @DeleteMapping("/{id}")
+//    public ResponseEntity<ApiResponseDTO> deleteUser(@PathVariable Long id) {
+//        userService.deleteUser(id);
+//        return ResponseEntity.ok(new ApiResponseDTO("User deleted successfully", java.time.LocalDateTime.now()));
+//    }
+//
+//    // ✅ Search Users (with Pagination)
+//    @GetMapping("/search")
+//    public ResponseEntity<Page<UserSummaryDTO>> searchUsers(
+//            @RequestParam(required = false) String fullName,
+//            @RequestParam(required = false) String role,
+//            @RequestParam(required = false) String gender,
+//            Pageable pageable) {
+//        return ResponseEntity.ok(userService.searchUsers(fullName, 
+//                role != null ? UserRole.valueOf(role.toUpperCase()) : null, 
+//                gender != null ? Gender.valueOf(gender.toUpperCase()) : null, 
+//                pageable));
+//    }
+//
+//    // ✅ Friend Requests: Get Pending
+//    @GetMapping("/{id}/friend-requests/pending")
+//    public ResponseEntity<List<FriendRequestResponseDTO>> getPendingFriendRequests(@PathVariable Long id) {
+//        return ResponseEntity.ok(userService.getPendingFriendRequests(id));
+//    }
+//
+//    // ✅ Friend Requests: Send
+//    @PostMapping("/{id}/friend-requests/send/{receiverId}")
+//    public ResponseEntity<ApiResponseDTO> sendFriendRequest(@PathVariable Long id, @PathVariable Long receiverId) {
+//        userService.sendFriendRequest(id, receiverId);
+//        return ResponseEntity.ok(new ApiResponseDTO("Friend request sent successfully", java.time.LocalDateTime.now()));
+//    }
+//
+//    // ✅ Friend Requests: Accept
+//    @PostMapping("/friend-requests/accept/{requestId}")
+//    public ResponseEntity<ApiResponseDTO> acceptFriendRequest(@PathVariable Long requestId) {
+//        userService.acceptFriendRequest(requestId);
+//        return ResponseEntity.ok(new ApiResponseDTO("Friend request accepted", java.time.LocalDateTime.now()));
+//    }
+//
+//    // ✅ Friend Requests: Reject
+//    @PostMapping("/friend-requests/reject/{requestId}")
+//    public ResponseEntity<ApiResponseDTO> rejectFriendRequest(@PathVariable Long requestId) {
+//        userService.rejectFriendRequest(requestId);
+//        return ResponseEntity.ok(new ApiResponseDTO("Friend request rejected", java.time.LocalDateTime.now()));
+//    }
+//
+//    // ✅ Check If Users Are Friends
+//    @GetMapping("/friends/check")
+//    public ResponseEntity<Boolean> areUsersFriends(@RequestParam Long userId1, @RequestParam Long userId2) {
+//        return ResponseEntity.ok(userService.areUsersFriends(userId1, userId2));
+//    }
+//
+//    // ✅ Get Unread Notifications Count
+//    @GetMapping("/{id}/notifications/unread-count")
+//    public ResponseEntity<Long> getUnreadNotificationsCount(@PathVariable Long id) {
+//        return ResponseEntity.ok(userService.countUnreadNotifications(id));
+//    }
+//
+//    // ✅ Get User Notifications
+//    @GetMapping("/{id}/notifications")
+//    public ResponseEntity<List<NotificationResponseDTO>> getUserNotifications(@PathVariable Long id) {
+//        return ResponseEntity.ok(userService.getUserNotifications(id));
+//    }
+//    
+//    @GetMapping
+//    @PreAuthorize("hasRole('ADMIN')")
+//    public ResponseEntity<ApiResponseDTO<List<UserFullDetailsResponseDTO.java>>> getAllUsers() {
+//        log.info("Fetching all users");
+//        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Users fetched successfully", userService.getAllUsers()));
+//    }
+//}
+package com.example.controller;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.connect2play.dto.ApiResponseDTO;
+import com.connect2play.dto.UserDetailsResponseDTO;
+import com.connect2play.dto.UserFullDetailsResponseDTO;
+import com.connect2play.dto.UserRegistrationDTO;
+import com.connect2play.dto.UserSummaryDTO;
+import com.connect2play.service.UserServiceImpl;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
+public class UserController {
+
+    private final UserServiceImpl userService;
+
+    
+//      User Registration
+     
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponseDTO<UserDetailsResponseDTO>> registerUser(@Valid @RequestBody UserRegistrationDTO userDto) {
+        log.info("Registering new user: {}", userDto.getEmail());
+       ApiResponseDTO< UserDetailsResponseDTO> savedUser = userService.registerUser(userDto);
+        return ResponseEntity.ok(savedUser);
+    }
+
+    
+//     User Login
+     
+//    @PostMapping("/login")
+//    public ResponseEntity<ApiResponseDTO<AuthResponseDTO>> loginUser(@Valid @RequestBody UserLoginDTO loginDto) {
+//        log.info("User login attempt: {}", loginDto.getEmail());
+//        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Login successful", userService.loginUser(loginDto)));
+//    }
+    
+    @GetMapping("/email/{email}")
+    public ResponseEntity<UserFullDetailsResponseDTO> getUserByEmail(@PathVariable String email) {
+        return ResponseEntity.ok(userService.findUserByEmail(email));
+    }
+    
+    @GetMapping("/email-check")
+    public ResponseEntity<Boolean> isEmailTaken(@RequestParam String email) {
+        return ResponseEntity.ok(userService.isEmailTaken(email));
+    }
+    
+    @PutMapping("/{id}/update")
+    public ResponseEntity<UserDetailsResponseDTO> updateUserProfile(
+            @PathVariable Long id, @Valid @RequestBody UserRegistrationDTO updatedUserDTO) {
+        return ResponseEntity.ok(userService.updateProfile(id, updatedUserDTO))};
+    
+
+    
+//      Get User by ID
+     
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponseDTO<UserFullDetailsResponseDTO>> getUserById(@PathVariable Long id) {
+        log.info("Fetching user with ID: {}", id);
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "User fetched successfully", userService.getUserById(id)));
+    }
+
+    
+//      Get All Users with Pagination (Admin Only)
+     
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponseDTO<Page<UserSummaryDTO>>> getAllUsers(Pageable pageable) {
+        log.info("Fetching all users with pagination: {}", pageable);
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Users fetched successfully", userService.getAllUsers(pageable)));
+    }
+
+    
+//      Update User Profile
+     
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponseDTO<UserDetailsResponseDTO>> updateUser(@PathVariable Long id, @Valid @RequestBody UserRegistrationDTO userDto) {
+        log.info("Updating user with ID: {}", id);
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "User updated successfully", userService.updateProfile(id, userDto)));
+    }
+
+//    /**
+//     * Change Password
+//     */
+//    @PutMapping("/{id}/change-password")
+//    public ResponseEntity<ApiResponseDTO<String>> changePassword(@PathVariable Long id, @Valid @RequestBody PasswordChangeDTO passwordDto) {
+//        log.info("Changing password for user ID: {}", id);
+//        userService.changePassword(id, passwordDto);
+//        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Password changed successfully", "Password updated."));
+//    }
+
+    
+//      Delete User (Soft Delete)
+     
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponseDTO<String>> deleteUser(@PathVariable Long id) {
+        log.info("Soft deleting user with ID: {}", id);
+        userService.deleteUser(id);
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "User soft deleted successfully", "User with ID " + id + " has been marked as deleted."));
+    }
+
+    
+//      Restore Soft Deleted User
+     
+//    @PutMapping("/{id}/restore")
+//    @PreAuthorize("hasRole('ADMIN')")
+//    public ResponseEntity<ApiResponseDTO<String>> restoreUser(@PathVariable Long id) {
+//        log.info("Restoring user with ID: {}", id);
+//        userService.restoreUser(id);
+//        return ResponseEntity.ok(new ApiResponseDTO<>(true, "User restored successfully", "User with ID " + id + " has been restored."));
+//    }
+}
+

@@ -1,0 +1,8 @@
+package com.connect2play.service;
+
+import com.connect2play.dto.TeamRequestCreateDTO;
+
+public interface ITeamRequestService {
+    public TeamRequestCreateDTO sendJoinRequest(Long userId, Long teamId);
+
+}

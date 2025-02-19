@@ -1,0 +1,38 @@
+package com.connect2play.dto;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+
+import com.connect2play.entities.MatchResult;
+import com.connect2play.entities.Sports;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class MatchHistoryDTO {
+    
+    private Long id;  
+    
+   // private Long team1Id;  
+   // private Long team2Id; 
+    
+    private TeamDetailsResponseDTO team1;
+    
+    private TeamDetailsResponseDTO team2;
+    
+    private TeamDetailsResponseDTO winner;
+    
+    private MatchResult result;  // WIN, LOSS, DRAW, ABANDONED
+
+    private Map<String, Integer> scores; // Flexible scoring system
+
+
+    private String matchDetails;  
+    
+    private Sports sportType;  // Sport Type (Football, Cricket, etc.)
+
+    private LocalDateTime matchDate;  
+
+}

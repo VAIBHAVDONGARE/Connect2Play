@@ -1,0 +1,73 @@
+package com.connect2play.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import com.connect2play.dto.TeamDTO;
+import com.connect2play.dto.TeamDetailsResponseDTO;
+import com.connect2play.dto.TeamSummaryDTO;
+import com.connect2play.entities.Sports;
+import com.connect2play.entities.Team;
+import com.connect2play.exception.ResourceNotFoundException;
+import com.connect2play.repository.ITeamRepository;
+
+@Service
+public class TeamServiceImpl implements ITeamService {
+
+	@Autowired
+    private  ITeamRepository teamRepository;
+	@Autowired
+    private  ModelMapper modelMapper;
+
+
+    // Fetch a team by its ID
+    @Override
+    public Optional<TeamDetailsResponseDTO> getTeamById(Long teamId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new ResourceNotFoundException("Team not found with ID: " + teamId));
+        return Optional.of(modelMapper.map(team, TeamDTO.class));
+    }
+
+    // Fetch all teams with pagination
+    @Override
+    public Page<TeamSummaryDTO> getAllTeams(Pageable pageable) {
+        return teamRepository.findAll(pageable).map(team -> modelMapper.map(team, TeamDTO.class));
+    }
+
+    // Search teams by multiple filters
+    @Override
+    public Page<TeamSummaryDTO> searchTeams(String name, Sports sportType, Pageable pageable) {
+        return teamRepository.findByFilters(name, sportType,  pageable)
+                .map(team -> modelMapper.map(team, TeamDTO.class));
+    }
+
+    // Create a new team (check if the name already exists)
+    @Override
+    public void createTeam(TeamDTO teamDTO) {
+        if (teamRepository.existsByNameIgnoreCase(teamDTO.getName())) {
+            throw new IllegalArgumentException("Team name already exists");
+        }
+        Team team = modelMapper.map(teamDTO, Team.class);  // Convert DTO to Entity
+        teamRepository.save(team);
+    }
+
+    // Fetch teams that sent challenges to the user
+    @Override
+    public List<TeamSummaryDTO> getTeamsThatSentChallenges(Long userId) {
+        List<Team> teams = teamRepository.findTeamsThatSentChallenges(userId);
+        return modelMapper.map(teams, List.class);
+    }
+
+    // Fetch teams that received challenges from the user
+    @Override
+    public List<TeamSummaryDTO> getTeamsThatReceivedChallenges(Long userId) {
+        List<Team> teams = teamRepository.findTeamsThatReceivedChallenges(userId);
+        return modelMapper.map(teams, List.class);
+    }
+}
